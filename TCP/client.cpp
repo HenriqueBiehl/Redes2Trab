@@ -22,7 +22,7 @@ using namespace std;
 struct network_packet{
     unsigned short op; 
     unsigned short more;
-    unsigned long int bytes; 
+    unsigned int bytes;
     char buf[BUFF_SIZE + 1];
 };
 
@@ -94,71 +94,85 @@ int main(int argc, char *argv[]){
     short opt; 
     int bytes_rec; 
     opt = chose_option();
-    //int packet_count;
 
     struct network_packet packet;
     memset(&packet, 0, sizeof(struct network_packet));
 
     while(opt != 0){
         
+
         switch (opt) {
             
             case (LIST_FILE):
+                {
+                    packet.op = LIST_FILE;
 
-                packet.op = LIST_FILE;
-
-                cout << "Enviando pedido de Lista" << endl;
-                send(sock_desc, &packet, sizeof(struct network_packet), 0);
-                memset(&packet, 0, sizeof(struct network_packet));
-
-                cout << "Listando arquivos" << endl;
-
-                while((bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0)) >= 0){
-                    cout << packet.buf;
+                    cout << "Enviando pedido de Lista" << endl;
+                    send(sock_desc, &packet, sizeof(struct network_packet), 0);
                     memset(&packet, 0, sizeof(struct network_packet));
 
-                    if(packet.more == 0)
-                        break;
-                }
+                    cout << "*** Listando arquivos ****" << endl << endl; ;
 
-                cout << endl;
+                    while((bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0)) >= 0){
+                        cout << packet.buf;
+                        memset(&packet, 0, sizeof(struct network_packet));
+
+                        if(packet.more == 0)
+                            break;
+                    }
+                    cout << endl << "**************************" << endl;
+
+                    cout << endl;
+                }
                 break; 
 
             case (DOWNLOAD_FILE):
-                char file_name[MAX_ARQ_NAME+1];
-                char destination[MAX_ARQ_NAME+1];
+                {
+                    char file_name[MAX_ARQ_NAME+1];
+                    char destination[MAX_ARQ_NAME+1];
 
-                cout << "Digite nome do arquivo:" << endl; 
-                cin >> file_name;
+                    cout << "Digite nome do arquivo:" << endl; 
+                    cin >> file_name;
 
-                packet.op = DOWNLOAD_FILE; 
-                packet.bytes = strlen(file_name);
-                strcpy(packet.buf, file_name);
-                
-                send(sock_desc, &packet, sizeof(struct network_packet), 0);
-                memset(&packet, 0, sizeof(struct network_packet));
-
-                memset(destination, 0 , MAX_ARQ_NAME + 1);
-                strcpy(destination, "received/");
-                strcat(destination, file_name);
-                
-                ofstream file;
-                file.open(destination);
-
-                while((bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0)) > 0){
+                    packet.op = DOWNLOAD_FILE; 
+                    packet.bytes = strlen(file_name);
+                    strcpy(packet.buf, file_name);
                     
-                    cout << "Recebi " << packet.bytes << " bytes" << endl;
-                    file.write(packet.buf, packet.bytes);
-                    
-                    if(packet.more == 0)
-                        break;
-                    
+                    send(sock_desc, &packet, sizeof(struct network_packet), 0);
                     memset(&packet, 0, sizeof(struct network_packet));
+
+                    memset(destination, 0 , MAX_ARQ_NAME + 1);
+                    strcpy(destination, "received/");
+                    strcat(destination, file_name);
+                    
+                    ofstream file;
+                    file.open(destination);
+
+                    int packet_count = 0;
+                    unsigned int bytes_left; 
+
+                    bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
+                    bytes_left = packet.bytes;
+
+                    while(bytes_left > 0 ){
+                        packet_count++;
+                        recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
+
+                        file.write(packet.buf, packet.bytes);
+
+                        bytes_left -= packet.bytes; 
+
+                        if(packet.more == 0)
+                            break;
+                        
+                        memset(&packet, 0, sizeof(struct network_packet));
+                    }
+
+                    file.close();
+
+                    cout << "Transmissão Concluida! Arquivo " << file_name << "salvo em: " << destination << endl;
+                    cout << packet_count << " packets received" << endl;
                 }
-
-                file.close();
-
-                cout << "Transmissão Concluida! Arquivo " << file_name << "salvo em: " << destination << endl;
                 break;  
         }
 
@@ -173,4 +187,4 @@ int main(int argc, char *argv[]){
     close(sock_desc); 
 
     return 0;
-}
+}    unsigned int file_size; 

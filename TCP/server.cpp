@@ -6,6 +6,8 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <string.h> 
+#include <chrono>
+#include <filesystem>
 
 #define TAM_LINE 5
 #define MAX_HOST_NAME 30
@@ -22,16 +24,17 @@
 struct network_packet{
     unsigned short op; 
     unsigned short more;
-    unsigned long int bytes; 
+    unsigned int bytes; 
     char buf[BUFF_SIZE + 1];
 };
 
 using namespace std;
+using namespace std::chrono;
 
 int main(int argc, char *argv[]){
     int sock_listen, sock_answer;
     unsigned int i; 
-    char buf[BUFSIZ+1];
+    //char buf[BUFSIZ+1];
     struct sockaddr_in end_local;
     struct sockaddr_in end_cliente;
     struct hostent *hp;
@@ -41,8 +44,6 @@ int main(int argc, char *argv[]){
         cout << "Uso correto: Servidor <porta>" << endl;
         exit(1);
     }
-
-    cout << "BUFSIZ: " << BUFSIZ << endl;
 
     gethostname(localhost, MAX_HOST_NAME);
 
@@ -79,6 +80,7 @@ int main(int argc, char *argv[]){
 
     struct network_packet packet;
     memset(&packet, 0, sizeof(struct network_packet));
+    int packet_count;
 
     while(1){
         // i = sizeof(end_local); 
@@ -90,90 +92,110 @@ int main(int argc, char *argv[]){
 
 
         read(sock_answer, &packet, sizeof(struct network_packet));
-        
+        packet_count = 0;
         switch(packet.op){
 
             case (LIST_FILE):
-            {
-                cout << "Recebi pedido de Lista" << endl;
+                {
+                    cout << "Recebi pedido de Lista" << endl;
 
-                const char *command = "find arqs -type f -printf \"%f %s bytes\n\" > temp";
-        
-                system(command);
+                    const char *command = "find arqs -type f -printf \"%f %s bytes\n\" > temp";
+            
+                    system(command);
 
-                ifstream file("temp"); 
+                    ifstream file("temp"); 
 
-                if(!file.is_open()){
-                    cout << "Erro ao abrir arquivo" << endl;
-                }
-                
-                memset(&packet, 0, sizeof(struct network_packet)); 
-                streamsize bytes_read; 
-                
-                while(!file.eof()){
-
-                    file.read(packet.buf, BUFF_SIZE);
-                    bytes_read = file.gcount(); 
-                    packet.op = LIST_FILE; 
-                    packet.bytes = bytes_read;
-
-                    cout << "Enviando : " << buf << endl;
-
-                    if(file.eof()){
-                        packet.more = 0;
+                    if(!file.is_open()){
+                        cout << "Erro ao abrir arquivo" << endl;
                     }
-                    else{
-                        packet.more = 1;
-                    }
-
-                    send(sock_answer, &packet, sizeof(struct network_packet), 0);
+                    
                     memset(&packet, 0, sizeof(struct network_packet)); 
-                }
+                    streamsize bytes_read; 
+                    
+                    while(!file.eof()){
 
-                cout << "Lista enviada com sucesso!" << endl;
-                system("rm -f temp");
-            }
-            break;
+                        file.read(packet.buf, BUFF_SIZE);
+                        bytes_read = file.gcount(); 
+                        packet.op = LIST_FILE; 
+                        packet.bytes = bytes_read;
+
+                        if(file.eof()){
+                            packet.more = 0;
+                        }
+                        else{
+                            packet.more = 1;
+                        }
+
+                        send(sock_answer, &packet, sizeof(struct network_packet), 0);
+                        memset(&packet, 0, sizeof(struct network_packet)); 
+                    }
+
+                    cout << "Lista enviada com sucesso!" << endl;
+                    system("rm -f temp");
+                }
+                break;
 
             case(DOWNLOAD_FILE):
-            {
-                char arq_name[MAX_ARQ_NAME + 1];
+                {
 
-                memset(arq_name, 0 , MAX_ARQ_NAME + 1);
-                strcpy(arq_name, "arqs/");
-                strcat(arq_name, packet.buf);
+                    char arq_name[MAX_ARQ_NAME + 1];
+                    memset(arq_name, 0 , MAX_ARQ_NAME + 1);
+                    strcpy(arq_name, "arqs/");
+                    strcat(arq_name, packet.buf);
 
-                ifstream file(arq_name); 
+                    ifstream file(arq_name); 
 
-                if(!file.is_open()){
-                    cout << "Erro ao abrir arquivo" << endl;
-                }
-                
-                memset(&packet, 0, sizeof(struct network_packet)); 
-                streamsize bytes_read; 
-
-                while(!file.eof()){
-
-                    file.read(packet.buf, BUFF_SIZE);
-                    bytes_read = file.gcount(); 
-                    packet.op = DOWNLOAD_FILE; 
-                    packet.bytes = bytes_read;
-
-                    cout << "Enviando " << bytes_read << "bytes" << endl;
-
-                    if(file.eof()){
-                        packet.more = 0;
+                    if(!file.is_open()){
+                        cout << "Erro ao abrir arquivo" << endl;
                     }
-                    else{
-                        packet.more = 1;
-                    }
+                    
+                    memset(&packet, 0, sizeof(struct network_packet)); 
+                    streamsize bytes_read; 
+                    
+                    unsigned int file_size = filesystem::file_size(arq_name);
+
+                    packet.op = DOWNLOAD_FILE;
+                    packet.bytes = file_size;
 
                     send(sock_answer, &packet, sizeof(struct network_packet), 0);
-                    memset(&packet, 0, sizeof(struct network_packet)); 
-                }
 
-                cout << "Arquivo enviado com sucesso!" << endl;
-            }    
+                    unsigned int checkpoint_size = file_size / 20;
+                    unsigned int checkpoint = checkpoint_size;
+                    unsigned int bytes_sent = 0;
+                    float percent = 0.0;
+
+                    cout << file_size << endl; 
+                    cout << checkpoint_size << endl; 
+                    cout << checkpoint << endl; 
+
+                    auto start = high_resolution_clock::now();
+                    while(!file.eof()){
+
+                        file.read(packet.buf, BUFF_SIZE);
+                        bytes_read = file.gcount(); 
+                        packet.op = DOWNLOAD_FILE; 
+                        packet.bytes = bytes_read;
+                        
+                        if(file.eof()){
+                            packet.more = 0;
+                        }
+                        else{
+                            packet.more = 1;
+                        }
+
+                        send(sock_answer, &packet, sizeof(struct network_packet), 0);
+                        memset(&packet, 0, sizeof(struct network_packet)); 
+                        packet_count++;
+
+                    }
+                    auto stop = high_resolution_clock::now();
+                    auto duration = duration_cast<microseconds>(stop-start);
+
+                    cout << "Arquivo enviado com sucesso!" << endl;
+                    cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
+                    cout << packet_count << " pacotes enviados " << endl;
+                }
+                break;
 
         }
 
