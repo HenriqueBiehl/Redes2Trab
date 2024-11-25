@@ -10,8 +10,13 @@
 
 using namespace std;
 
+
+#define END_TRANSMISSION 0
 #define LIST_FILE 1
 #define DOWNLOAD_FILE 2
+#define ACK 3
+
+#define PACK_ROOF 100
 
 #define BUFF_SIZE 2048
 #define MAX_ARQ_NAME 1024
@@ -153,11 +158,13 @@ int main(int argc, char *argv[]){
 
                     bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
                     bytes_left = packet.bytes;
+                    short pack_count = 0;
 
                     while(bytes_left > 0 ){
                         packet_count++;
                         recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
-
+                        pack_count++;
+                        
                         file.write(packet.buf, packet.bytes);
 
                         bytes_left -= packet.bytes; 
@@ -166,25 +173,32 @@ int main(int argc, char *argv[]){
                             break;
                         
                         memset(&packet, 0, sizeof(struct network_packet));
+
+                        if(pack_count == PACK_ROOF){
+                            pack_count  = 0; 
+                            packet.op = ACK;
+                            send(sock_desc, &packet, sizeof(struct network_packet), 0);
+                        }
                     }
 
                     file.close();
 
-                    cout << "Transmissão Concluida! Arquivo " << file_name << "salvo em: " << destination << endl;
+                    cout << "Transmissão Concluida! Arquivo " << file_name << endl;
+                    cout << "Salvo em: " << destination << endl;
                     cout << packet_count << " packets received" << endl;
                 }
-                break;  
+                break;
+
         }
 
         opt = chose_option();
-
     }
          
-
-    //read(sock_desc, buf, BUFSIZ);
-    //cout << "Recebi: " << buf << endl;
-
+    packet.op = END_TRANSMISSION;
+    send(sock_desc, &packet, sizeof(struct network_packet), 0);
     close(sock_desc); 
+
+    cout << "Conexão encerrada." << endl;
 
     return 0;
 }    unsigned int file_size; 
