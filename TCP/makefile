@@ -1,22 +1,14 @@
-
 CXXFLAGS=-std=c++17 -g -Wall
 
-CC=g++ 
+TARGET=client server 
 
-OBJECTS=server.o client.o
+normal: $(TARGET)
 
-#server: client server.o
-#	$(CC) *.o -o server $(CXXFLAGS)
+client:client.cpp
+	g++ $(CXXFLAGS) client.cpp -o client
 
-#server.o: server.cpp client 
-	$(CC) -c server.cpp $(CXXFLAGS)
-
-#client: client.o 
-	$(CC) client.o -o client $(CXXFLAGS)
-
-#client.o: client.cpp 
-	$(CC) -c client.cpp $(CXXFLAGS)
+server:server.cpp
+	g++ $(CXXFLAGS) server.cpp -o server
 
 clean:
-	rm -f server client
-
+	rm -f $(TARGET) 

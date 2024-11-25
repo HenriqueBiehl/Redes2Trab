@@ -13,8 +13,18 @@
 
 #define LIST_FILE 1
 #define DOWNLOAD_FILE 2
+#define BUFF_SIZE 2048
+#define MAX_ARQ_NAME 1024
 
 #define END_OF_FILE "EOF"
+
+
+struct network_packet{
+    unsigned short op; 
+    unsigned short more;
+    unsigned long int bytes; 
+    char buf[BUFF_SIZE + 1];
+};
 
 using namespace std;
 
@@ -31,6 +41,8 @@ int main(int argc, char *argv[]){
         cout << "Uso correto: Servidor <porta>" << endl;
         exit(1);
     }
+
+    cout << "BUFSIZ: " << BUFSIZ << endl;
 
     gethostname(localhost, MAX_HOST_NAME);
 
@@ -65,6 +77,9 @@ int main(int argc, char *argv[]){
         exit(1);              
     }
 
+    struct network_packet packet;
+    memset(&packet, 0, sizeof(struct network_packet));
+
     while(1){
         // i = sizeof(end_local); 
 
@@ -74,52 +89,95 @@ int main(int argc, char *argv[]){
         // }
 
 
-        read(sock_answer, buf, BUFSIZ);
+        read(sock_answer, &packet, sizeof(struct network_packet));
+        
+        switch(packet.op){
 
-        if(strcmp(buf, "list-files") == 0){
-            const char *command = "find arqs -type f -printf \"%f %s bytes\n\" > temp";
-    
-            system(command);
+            case (LIST_FILE):
+            {
+                cout << "Recebi pedido de Lista" << endl;
 
-            ifstream file("temp"); 
+                const char *command = "find arqs -type f -printf \"%f %s bytes\n\" > temp";
+        
+                system(command);
 
-            if(!file.is_open()){
-                cout << "Erro ao abrir arquivo" << endl;
+                ifstream file("temp"); 
+
+                if(!file.is_open()){
+                    cout << "Erro ao abrir arquivo" << endl;
+                }
+                
+                memset(&packet, 0, sizeof(struct network_packet)); 
+                streamsize bytes_read; 
+                
+                while(!file.eof()){
+
+                    file.read(packet.buf, BUFF_SIZE);
+                    bytes_read = file.gcount(); 
+                    packet.op = LIST_FILE; 
+                    packet.bytes = bytes_read;
+
+                    cout << "Enviando : " << buf << endl;
+
+                    if(file.eof()){
+                        packet.more = 0;
+                    }
+                    else{
+                        packet.more = 1;
+                    }
+
+                    send(sock_answer, &packet, sizeof(struct network_packet), 0);
+                    memset(&packet, 0, sizeof(struct network_packet)); 
+                }
+
+                cout << "Lista enviada com sucesso!" << endl;
+                system("rm -f temp");
             }
-            
-            memset(buf, 0, BUFSIZ);
-            streamsize bytes_read; 
-            while(!file.eof()){
-                file.read(buf, BUFSIZ);
-                bytes_read = file.gcount(); 
-                cout << "Enviando : " << buf << endl;
-                send(sock_answer, buf, bytes_read, 0);
-                memset(buf, 0, BUFSIZ);
-            }
+            break;
 
-            strcpy(buf, END_OF_FILE);
-            send(sock_answer, buf, strlen(buf), 0); 
+            case(DOWNLOAD_FILE):
+            {
+                char arq_name[MAX_ARQ_NAME + 1];
 
-            cout << "Lista enviada com sucesso!" << endl;
-            system("rm -f temp");
+                memset(arq_name, 0 , MAX_ARQ_NAME + 1);
+                strcpy(arq_name, "arqs/");
+                strcat(arq_name, packet.buf);
+
+                ifstream file(arq_name); 
+
+                if(!file.is_open()){
+                    cout << "Erro ao abrir arquivo" << endl;
+                }
+                
+                memset(&packet, 0, sizeof(struct network_packet)); 
+                streamsize bytes_read; 
+
+                while(!file.eof()){
+
+                    file.read(packet.buf, BUFF_SIZE);
+                    bytes_read = file.gcount(); 
+                    packet.op = DOWNLOAD_FILE; 
+                    packet.bytes = bytes_read;
+
+                    cout << "Enviando " << bytes_read << "bytes" << endl;
+
+                    if(file.eof()){
+                        packet.more = 0;
+                    }
+                    else{
+                        packet.more = 1;
+                    }
+
+                    send(sock_answer, &packet, sizeof(struct network_packet), 0);
+                    memset(&packet, 0, sizeof(struct network_packet)); 
+                }
+
+                cout << "Arquivo enviado com sucesso!" << endl;
+            }    
+
         }
-        else{
-            ifstream file("arqs/name.txt"); 
 
-            if(!file.is_open()){
-                cout << "Erro ao abrir arquivo" << endl;
-            }
-
-            streamsize bytes_read; 
-            while(!file.eof()){
-                file.read(buf, BUFSIZ);
-                bytes_read = file.gcount(); 
-                send(sock_answer, buf, bytes_read, 0);
-                memset(buf, 0, BUFSIZ);
-            }
-
-            cout << "Arquivo enviado com sucesso!" << endl;
-        }
+        
 
         //read(sock_answer, buf, BUFSIZ);
         //cout << "Recebi: " << buf << endl;

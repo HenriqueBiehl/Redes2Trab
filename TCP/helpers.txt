@@ -1,3 +1,7 @@
 g++ server.cpp -o server -std=c++17 -g -Wall
 
 g++ client.cpp -o client -std=c++17 -g -Wall
+
+./server 5000
+
+./client localhost 5000 "teste"

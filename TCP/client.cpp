@@ -8,13 +8,24 @@
 #include <string.h>
 #include <string.h>
 
-
 using namespace std;
 
 #define LIST_FILE 1
 #define DOWNLOAD_FILE 2
 
+#define BUFF_SIZE 2048
+#define MAX_ARQ_NAME 1024
+
 #define END_OF_FILE "EOF"
+
+
+struct network_packet{
+    unsigned short op; 
+    unsigned short more;
+    unsigned long int bytes; 
+    char buf[BUFF_SIZE + 1];
+};
+
 
 short chose_option(){
     short opt; 
@@ -40,7 +51,7 @@ int main(int argc, char *argv[]){
     int sock_desc;
     struct sockaddr_in sa;
     struct hostent *hp;
-    char buf[BUFSIZ+1]; 
+    //char buf[BUFSIZ+1]; 
     char *host; 
     //char *dados;
 
@@ -83,41 +94,71 @@ int main(int argc, char *argv[]){
     short opt; 
     int bytes_rec; 
     opt = chose_option();
+    //int packet_count;
+
+    struct network_packet packet;
+    memset(&packet, 0, sizeof(struct network_packet));
 
     while(opt != 0){
         
         switch (opt) {
             
             case (LIST_FILE):
-                strcpy(buf, "list-files");
-                send(sock_desc, buf, strlen(buf), 0);
-                memset(buf, 0, strlen(buf));
-                
+
+                packet.op = LIST_FILE;
+
+                cout << "Enviando pedido de Lista" << endl;
+                send(sock_desc, &packet, sizeof(struct network_packet), 0);
+                memset(&packet, 0, sizeof(struct network_packet));
+
                 cout << "Listando arquivos" << endl;
-                while((bytes_rec = recv(sock_desc, buf, BUFSIZ, 0)) > 0){
-                    /*if (string(buf).find(END_OF_FILE) != string::npos) {
-                        break; // Terminou a transmissão
-                    }*/
-                    cout << buf;
-                    memset(buf, 0, BUFSIZ);
+
+                while((bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0)) >= 0){
+                    cout << packet.buf;
+                    memset(&packet, 0, sizeof(struct network_packet));
+
+                    if(packet.more == 0)
+                        break;
                 }
 
                 cout << endl;
                 break; 
 
             case (DOWNLOAD_FILE):
-                strcpy(buf, "download");
-                send(sock_desc, buf, strlen(buf), 0);
-                memset(buf, 0, strlen(buf));
+                char file_name[MAX_ARQ_NAME+1];
+                char destination[MAX_ARQ_NAME+1];
+
+                cout << "Digite nome do arquivo:" << endl; 
+                cin >> file_name;
+
+                packet.op = DOWNLOAD_FILE; 
+                packet.bytes = strlen(file_name);
+                strcpy(packet.buf, file_name);
+                
+                send(sock_desc, &packet, sizeof(struct network_packet), 0);
+                memset(&packet, 0, sizeof(struct network_packet));
+
+                memset(destination, 0 , MAX_ARQ_NAME + 1);
+                strcpy(destination, "received/");
+                strcat(destination, file_name);
                 
                 ofstream file;
-                file.open("received/arq-client.txt");
+                file.open(destination);
 
-                while((bytes_rec = recv(sock_desc, buf, BUFSIZ, 0)) > 0){
-                    file.write(buf, bytes_rec);
-                    memset(buf, 0, BUFSIZ);
+                while((bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0)) > 0){
+                    
+                    cout << "Recebi " << packet.bytes << " bytes" << endl;
+                    file.write(packet.buf, packet.bytes);
+                    
+                    if(packet.more == 0)
+                        break;
+                    
+                    memset(&packet, 0, sizeof(struct network_packet));
                 }
+
                 file.close();
+
+                cout << "Transmissão Concluida! Arquivo " << file_name << "salvo em: " << destination << endl;
                 break;  
         }
 
