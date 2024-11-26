@@ -7,14 +7,16 @@
 #include <netdb.h>
 #include <string.h>
 #include <string.h>
+#include <chrono>
 
 using namespace std;
-
+using namespace std::chrono;
 
 #define END_TRANSMISSION 0
 #define LIST_FILE 1
 #define DOWNLOAD_FILE 2
-#define ACK 3
+#define DOWNLOAD_ALL_FILES 3
+#define ACK 4
 
 #define PACK_ROOF 100
 
@@ -56,17 +58,14 @@ int main(int argc, char *argv[]){
     int sock_desc;
     struct sockaddr_in sa;
     struct hostent *hp;
-    //char buf[BUFSIZ+1]; 
     char *host; 
-    //char *dados;
 
-    if(argc != 4){
-        cout << "Uso correto: client <Nome Serv> <porta> <dados>" << endl;
+    if(argc != 3){
+        cout << "Uso correto: client <Nome Serv> <porta>" << endl;
         exit(1); 
     }
 
     host = argv[1];
-    //dados = argv [3];
 
     if((hp = gethostbyname(host)) == NULL){
         cout << "Não Consegui o endereço de IP do Servidor" << endl;
@@ -103,8 +102,7 @@ int main(int argc, char *argv[]){
     struct network_packet packet;
     memset(&packet, 0, sizeof(struct network_packet));
 
-    while(opt != 0){
-        
+    while(opt != END_TRANSMISSION){
 
         switch (opt) {
             
@@ -158,12 +156,12 @@ int main(int argc, char *argv[]){
 
                     bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
                     bytes_left = packet.bytes;
-                    short pack_count = 0;
+                    short ack_count = 0;
 
                     while(bytes_left > 0 ){
                         packet_count++;
+                        ack_count++;
                         recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
-                        pack_count++;
                         
                         file.write(packet.buf, packet.bytes);
 
@@ -174,8 +172,8 @@ int main(int argc, char *argv[]){
                         
                         memset(&packet, 0, sizeof(struct network_packet));
 
-                        if(pack_count == PACK_ROOF){
-                            pack_count  = 0; 
+                        if(ack_count == PACK_ROOF){
+                            ack_count  = 0; 
                             packet.op = ACK;
                             send(sock_desc, &packet, sizeof(struct network_packet), 0);
                         }
@@ -188,7 +186,74 @@ int main(int argc, char *argv[]){
                     cout << packet_count << " packets received" << endl;
                 }
                 break;
+            
+            case (DOWNLOAD_ALL_FILES):
+                {
+                    packet.op = DOWNLOAD_ALL_FILES; 
+                    
+                    send(sock_desc, &packet, sizeof(struct network_packet), 0);
+                    memset(&packet, 0, sizeof(struct network_packet));
 
+                    bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
+
+                    auto list_start = high_resolution_clock::now();
+                    while(packet.more != 0){ 
+                        
+                        char file_name[MAX_ARQ_NAME+1];
+                        char destination[MAX_ARQ_NAME+1];
+
+                        strcpy(destination, "received/");
+                        strcpy(file_name, packet.buf);
+                        strcat(destination, packet.buf);
+                        
+                        ofstream file;
+                        file.open(destination);
+
+                        int packet_count = 0;
+                        unsigned int bytes_left; 
+                        bytes_left = packet.bytes;
+
+                        short ack_count = 0;
+
+                        while(bytes_left > 0 ){
+                            packet_count++;
+                            ack_count++;
+                            recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
+                            
+                            file.write(packet.buf, packet.bytes);
+
+                            bytes_left -= packet.bytes; 
+
+                            if(packet.more == 0)
+                                break;
+                            
+                            memset(&packet, 0, sizeof(struct network_packet));
+
+                            if(ack_count == PACK_ROOF){
+                                ack_count  = 0; 
+                                packet.op = ACK;
+                                send(sock_desc, &packet, sizeof(struct network_packet), 0);
+                            }
+                        }
+
+                        file.close();
+
+                        cout << "Transmissão Concluida! Arquivo " << file_name << endl;
+                        cout << "Salvo em: " << destination << endl;
+                        cout << packet_count << " packets received" << endl;
+
+                        bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
+
+                    }
+                    auto list_stop = high_resolution_clock::now();
+                    auto list_duration = duration_cast<microseconds>(list_stop-list_start);
+                    
+                    cout << "Todos os arquivos foram recebidos com sucesso!" << endl;
+                    cout << "Tempo de transmissão de todos os arquivos: " << list_duration.count() << " ms" << endl;
+
+                }
+                break; 
+        
         }
 
         opt = chose_option();

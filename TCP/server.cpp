@@ -16,7 +16,8 @@
 #define END_TRANSMISSION 0
 #define LIST_FILE 1
 #define DOWNLOAD_FILE 2
-#define ACk 3
+#define DOWNLOAD_ALL_FILES 3
+#define ACK 4
 
 #define PACK_ROOF 100
 
@@ -39,7 +40,6 @@ using namespace std::chrono;
 int main(int argc, char *argv[]){
     int sock_listen, sock_answer;
     unsigned int i; 
-    //char buf[BUFSIZ+1];
     struct sockaddr_in end_local;
     struct sockaddr_in end_cliente;
     struct hostent *hp;
@@ -131,6 +131,7 @@ int main(int argc, char *argv[]){
                             memset(&packet, 0, sizeof(struct network_packet)); 
                         }
 
+                        file.close();
                         cout << "Lista enviada com sucesso!" << endl;
                         system("rm -f temp");
                     }
@@ -160,7 +161,7 @@ int main(int argc, char *argv[]){
 
                         send(sock_answer, &packet, sizeof(struct network_packet), 0);
 
-                        short pack_count = 0;
+                        short ack_count = 0;
 
                         cout << "Enviando..." << endl;
                         auto start = high_resolution_clock::now();
@@ -181,10 +182,10 @@ int main(int argc, char *argv[]){
                             send(sock_answer, &packet, sizeof(struct network_packet), 0);
                             memset(&packet, 0, sizeof(struct network_packet)); 
                             packet_count++;
-                            pack_count++;
+                            ack_count++;
 
-                            if(pack_count == PACK_ROOF){
-                                pack_count = 0;
+                            if(ack_count == PACK_ROOF){
+                                ack_count = 0;
                                 recv(sock_answer, &packet, sizeof(struct network_packet) , 0);
                             }
 
@@ -195,8 +196,99 @@ int main(int argc, char *argv[]){
                         cout << "Arquivo enviado com sucesso!" << endl;
                         cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
                         cout << packet_count << " pacotes enviados " << endl;
+
+                        file.close();
                     }
                     break;
+                case (DOWNLOAD_ALL_FILES):
+                    {
+
+                        const char *command = "find arqs -type f -printf \"%f\n\" > temp";
+                
+                        system(command);
+
+                        ifstream list_files("temp"); 
+
+                        if(!list_files.is_open()){
+                            cout << "Erro ao abrir arquivo" << endl;
+                        }
+                        string file_name;
+                        auto list_start =  high_resolution_clock::now();
+                        while(!list_files.eof()){
+                            char arq_name[MAX_ARQ_NAME + 1];
+                            memset(arq_name, 0 , MAX_ARQ_NAME + 1);
+                            strcpy(arq_name, "arqs/");
+                            memset(&packet, 0, sizeof(struct network_packet));
+
+
+                            getline(list_files, file_name); 
+                            file_name.copy(packet.buf, file_name.size());
+
+                            strcat(arq_name, packet.buf);
+
+                            unsigned int file_size = filesystem::file_size(arq_name);
+
+                            packet.op = DOWNLOAD_ALL_FILES;
+                            packet.bytes = file_size; 
+                            packet.more = 1;
+                            file_name.copy(packet.buf, file_name.size());
+                            send(sock_answer, &packet, sizeof(struct network_packet), 0);
+                            memset(&packet, 0, sizeof(struct network_packet));
+
+                            ifstream file(arq_name);
+                            
+                            if(!list_files.is_open()){
+                                cout << "Erro ao abrir arquivo" << endl;
+                            }
+
+                            short ack_count = 0;
+                            packet_count = 0;
+                            cout << "Enviando..." << endl;
+                            unsigned int bytes_read;
+
+                            auto start = high_resolution_clock::now();
+                            while(!file.eof()){
+
+                                file.read(packet.buf, BUFF_SIZE);
+                                bytes_read = file.gcount(); 
+                                packet.op = DOWNLOAD_ALL_FILES; 
+                                packet.bytes = bytes_read;
+                                
+                                send(sock_answer, &packet, sizeof(struct network_packet), 0);
+                                memset(&packet, 0, sizeof(struct network_packet)); 
+                                packet_count++;
+                                ack_count++;
+
+                                if(ack_count == PACK_ROOF){
+                                    ack_count = 0;
+                                    recv(sock_answer, &packet, sizeof(struct network_packet) , 0);
+                                }
+
+                            }
+                            auto stop = high_resolution_clock::now();
+                            auto duration = duration_cast<microseconds>(stop-start);
+
+                            cout << "Arquivo enviado com sucesso!" << endl;
+                            cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
+                            cout << packet_count << " pacotes enviados " << endl;
+
+                            file.close();
+                        }
+
+                        packet.more = 0; 
+                        send(sock_answer, &packet, sizeof(struct network_packet), 0);
+
+                        auto list_stop = high_resolution_clock::now();
+                        auto list_duration = duration_cast<microseconds>(list_stop-list_start);
+
+                        cout << "Todos os arquivos foram enviados com sucesso!" << endl;
+                        cout << "Tempo de transmissão de toda a lista: " << list_duration.count() << " ms" << endl;
+
+                        list_files.close();
+                        system("rm -f temp");
+
+                    }
+                    break; 
 
                 case (END_TRANSMISSION):
                     {
