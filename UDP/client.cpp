@@ -75,8 +75,8 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
-    short opt; 
-    int bytes_rec; 
+    short opt;
+    int bytes_rec;
     opt = chose_option();
 
     struct network_packet packet;
@@ -85,6 +85,24 @@ int main(int argc, char *argv[]){
     while(opt != 0){
         switch (opt) {
             case (LIST_FILE):
+                packet.op = LIST_FILE;
+
+                cout << "Enviando pedido de Lista" << endl;
+                // send(sockdescr, &packet, sizeof(struct network_packet), 0);
+                sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, sizeof(sa));
+                memset(&packet, 0, sizeof(struct network_packet));
+
+                cout << "*** Listando arquivos ****" << endl << endl;
+
+                while((bytes_rec = recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i)) >= 0){
+                    cout << packet.buf;
+                    memset(&packet, 0, sizeof(struct network_packet));
+
+                    if(packet.more == 0)
+                        break;
+                }
+                cout << endl << "**************************" << endl;
+
                 break;
 
             case (DOWNLOAD_FILE):
