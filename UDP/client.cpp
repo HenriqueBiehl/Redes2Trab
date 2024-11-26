@@ -1,5 +1,6 @@
 #include <iostream> 
 #include <fstream>
+#include <filesystem>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -53,8 +54,8 @@ int main(int argc, char *argv[]){
     char *host;
     unsigned int i;
 
-    if(argc != 3){
-        cout << "Uso correto: client <Nome Serv> <porta>" << endl;
+    if(argc != 3 && argc != 4){
+        cout << "Uso correto: client <Nome Serv> <porta> <flag-opcional -c>" << endl;
         exit(1); 
     }
 
@@ -106,6 +107,7 @@ int main(int argc, char *argv[]){
                 break;
 
             case (DOWNLOAD_FILE):
+            {
                 char name[MAX_ARQ_NAME+1];
                 char newfile[MAX_ARQ_NAME+1];
 
@@ -150,9 +152,40 @@ int main(int argc, char *argv[]){
 
                 file.close();
 
-                cout << "Transmissão Concluida! Arquivo " << name << "salvo em: " << newfile << endl;
-                cout << packet_count << " packets received" << endl;
-                break;  
+                cout << "Transmissão Concluida! Arquivo " << name << " salvo em: " << newfile << endl;
+                cout << packet_count << " packets received" << endl << endl;
+
+                // -c flag compara o arquivo original com o recebido(se o original existir)
+                if (argc == 4) {
+                    if (strcmp(argv[3], "-c") == 0) {
+                        char original_name[MAX_ARQ_NAME+1];;
+                        memset(original_name, 0 , MAX_ARQ_NAME + 1);
+                        strcpy(original_name, "server_arqs/");
+                        strcat(original_name, name);
+
+                        ifstream original;
+                        ifstream received;
+
+                        original.open(original_name);
+                        received.open(newfile);
+
+                        std::filesystem::path p_original{original_name};
+                        std::filesystem::path p_received{newfile};
+
+                        if (!received.fail()) {
+                            long int original_size = std::filesystem::file_size(p_original);
+                            long int received_size = std::filesystem::file_size(p_received);
+                            long int diff = original_size - received_size;
+                            int percentage = 100 * received_size / original_size;
+                            cout << "Um total de " << diff << " bytes não chegaram, sendo que cerca de " << percentage << "\% dos bytes foram transmitidos" << endl;
+                        }
+
+                        original.close();
+                        received.close();
+                    }
+                }
+            }
+            break;  
         }
 
         opt = chose_option();
