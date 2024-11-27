@@ -78,7 +78,45 @@ int main(int argc, char *argv[]){
 
         switch(packet.op) {
             case (LIST_FILE):
-                break;
+            {
+                cout << "Recebi pedido de Lista" << endl;
+
+                const char *command = "find server_arqs -type f -printf \"%f %s bytes\n\" > temp";
+        
+                system(command);
+
+                ifstream file("temp"); 
+
+                if(!file.is_open()){
+                    cout << "Erro ao abrir arquivo" << endl;
+                }
+                
+                memset(&packet, 0, sizeof(struct network_packet)); 
+                streamsize bytes_read; 
+                
+                while(!file.eof()){
+
+                    file.read(packet.buf, BUFF_SIZE);
+                    bytes_read = file.gcount(); 
+                    packet.op = LIST_FILE; 
+                    packet.bytes = bytes_read;
+
+                    if(file.eof()){
+                        packet.more = 0;
+                    }
+                    else{
+                        packet.more = 1;
+                    }
+
+                    sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, i);
+                    memset(&packet, 0, sizeof(struct network_packet)); 
+                }
+
+                file.close();
+                cout << "Lista enviada com sucesso!" << endl;
+                system("rm -f temp");
+            }
+            break;
 
             case (DOWNLOAD_FILE):
                 char arq_name[MAX_ARQ_NAME + 1];
