@@ -159,10 +159,10 @@ int main(int argc, char *argv[]){
                     short ack_count = 0;
 
                     while(bytes_left > 0 ){
+                        recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
                         packet_count++;
                         ack_count++;
-                        recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
-                        
+
                         file.write(packet.buf, packet.bytes);
 
                         bytes_left -= packet.bytes; 
@@ -210,28 +210,35 @@ int main(int argc, char *argv[]){
                         file.open(destination);
 
                         int packet_count = 0;
-                        unsigned int bytes_left; 
-                        bytes_left = packet.bytes;
+                        unsigned int bytes_left = packet.bytes;
+
+                        cout << "Baixando: " << file_name << endl;
+                        cout << "Tamanho: " << packet.bytes << endl;
 
                         short ack_count = 0;
 
                         while(bytes_left > 0 ){
+                            recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
                             packet_count++;
                             ack_count++;
-                            recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
-                            
+
+                            //cout << "Baixando... " << endl;
+
                             file.write(packet.buf, packet.bytes);
 
                             bytes_left -= packet.bytes; 
 
-                            if(packet.more == 0)
+                            /*if(packet.more == 0){
+                                cout << "Sem mais arquivos, encerrando execução \n" << endl;
                                 break;
+                            }*/
                             
                             memset(&packet, 0, sizeof(struct network_packet));
 
                             if(ack_count == PACK_ROOF){
                                 ack_count  = 0; 
                                 packet.op = ACK;
+                                cout << "100 pacotes recebidos, enviando ACK!" << endl; 
                                 send(sock_desc, &packet, sizeof(struct network_packet), 0);
                             }
                         }
@@ -242,8 +249,13 @@ int main(int argc, char *argv[]){
                         cout << "Salvo em: " << destination << endl;
                         cout << packet_count << " packets received" << endl;
 
-                        bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
+                        cout << "Enviando ACK: " << file_name << " recebido!" << endl;
+                        //Envia ACK do arquivo indicando que pode receber o proximo arquivo 
+                        packet.op = ACK; 
+                        send(sock_desc, &packet, sizeof(struct network_packet), 0);  
 
+
+                        recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
                     }
                     auto list_stop = high_resolution_clock::now();
                     auto list_duration = duration_cast<microseconds>(list_stop-list_start);
