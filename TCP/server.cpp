@@ -18,6 +18,8 @@
 #define DOWNLOAD_FILE 2
 #define DOWNLOAD_ALL_FILES 3
 #define ACK 4
+#define NACK 5
+#define ERROR 6
 
 #define PACK_ROOF 100
 
@@ -36,6 +38,63 @@ struct network_packet{
 
 using namespace std;
 using namespace std::chrono;
+
+int send_file(int socket, char *file_name, short op_flag){
+    struct network_packet packet;
+    int packet_count;
+    short ack_count = 0;
+
+    ifstream file(file_name); 
+
+    if(!file.is_open()){
+        cout << "Erro ao abrir arquivo" << endl;
+        return -1;
+    }
+    
+    memset(&packet, 0, sizeof(struct network_packet)); 
+    streamsize bytes_read; 
+    
+    while(!file.eof()){
+        file.read(packet.buf, BUFF_SIZE);
+        bytes_read = file.gcount(); 
+        packet.op = op_flag; 
+        packet.bytes = bytes_read;
+
+        if(file.eof() && op_flag != DOWNLOAD_ALL_FILES)
+            packet.op = 0; 
+        else 
+            packet.op = 1;
+
+        send(socket, &packet, sizeof(struct network_packet), 0);
+        // auto timeC = high_resolution_clock::now();
+        // auto duration = duration_cast<microseconds>(timeC.time_since_epoch());
+
+        // cout << "Enviando no momento " << duration.count() << endl;
+        memset(&packet, 0, sizeof(struct network_packet)); 
+        packet_count++;
+        ack_count++;
+
+        if(ack_count == PACK_ROOF){
+            cout << "100 pacotes enviados, aguardando ACK..." << endl;
+            ack_count = 0;
+            
+            if(recv(socket, &packet, sizeof(struct network_packet) , 0) < 0){
+                cout << "Erro ao receber pacote! " << endl; 
+                exit(1);
+            }                   
+            
+            if(packet.op == ACK)
+                cout << "ACK Recebido!" << endl;
+            else 
+                return -1;
+        }
+    }
+
+    file.close();
+
+    return packet_count;
+}
+
 
 int main(int argc, char *argv[]){
     int sock_listen, sock_answer;
@@ -101,38 +160,29 @@ int main(int argc, char *argv[]){
                         cout << "Recebi pedido de Lista" << endl;
 
                         const char *command = "find arqs -type f -printf \"%f %s bytes\n\" > temp";
-                
+                        char list[] = "temp";
+
+                        system ("cat temp");
                         system(command);
+                        
+                        auto start =  high_resolution_clock::now();
+                        packet_count = send_file(sock_answer, list, LIST_FILE);
 
-                        ifstream file("temp"); 
-
-                        if(!file.is_open()){
-                            cout << "Erro ao abrir arquivo" << endl;
+                        if(packet_count > 0){
+                            auto stop = high_resolution_clock::now();
+                            auto duration = duration_cast<microseconds>(stop-start);
+                            
+                            cout << "Lista enviada com sucesso!" << endl;
+                            cout << "Tempo de transmissão de toda a lista: " << duration.count() << " ms" << endl;
+                            cout << packet_count << " pacotes enviados " << endl;
                         }
-                        
-                        memset(&packet, 0, sizeof(struct network_packet)); 
-                        streamsize bytes_read; 
-                        
-                        while(!file.eof()){
-
-                            file.read(packet.buf, BUFF_SIZE);
-                            bytes_read = file.gcount(); 
-                            packet.op = LIST_FILE; 
-                            packet.bytes = bytes_read;
-
-                            if(file.eof()){
-                                packet.more = 0;
-                            }
-                            else{
-                                packet.more = 1;
-                            }
-
+                        else{
+                            cout << "Falha ao transmitir a lista de arquivos!" << endl;
+                            packet.op = ERROR;
+                            strcpy(packet.buf, "FALHA AO TRANSMITIR LISTA ARQUIVOS\n");
                             send(sock_answer, &packet, sizeof(struct network_packet), 0);
-                            memset(&packet, 0, sizeof(struct network_packet)); 
                         }
 
-                        file.close();
-                        cout << "Lista enviada com sucesso!" << endl;
                         system("rm -f temp");
                     }
                     break;
@@ -144,16 +194,17 @@ int main(int argc, char *argv[]){
                         memset(arq_name, 0 , MAX_ARQ_NAME + 1);
                         strcpy(arq_name, "arqs/");
                         strcat(arq_name, packet.buf);
-
-                        ifstream file(arq_name); 
-
-                        if(!file.is_open()){
-                            cout << "Erro ao abrir arquivo" << endl;
-                        }
                         
                         memset(&packet, 0, sizeof(struct network_packet)); 
-                        streamsize bytes_read; 
                         
+                        if(!filesystem::exists(arq_name)){
+                            cout << "Erro! Arquivo: " << arq_name << " inexistente!" << endl;
+                            packet.op = ERROR;
+                            strcpy(packet.buf, "ARQUIVO INEXISTENTE\n");
+                            send(sock_answer, &packet, sizeof(struct network_packet), 0);
+                            break; 
+                        }
+
                         unsigned int file_size = filesystem::file_size(arq_name);
 
                         packet.op = DOWNLOAD_FILE;
@@ -161,48 +212,26 @@ int main(int argc, char *argv[]){
 
                         send(sock_answer, &packet, sizeof(struct network_packet), 0);
 
-                        short ack_count = 0;
-
                         cout << "Enviando..." << endl;
+
                         auto start = high_resolution_clock::now();
-                        while(!file.eof()){
-
-                            file.read(packet.buf, BUFF_SIZE);
-                            bytes_read = file.gcount(); 
-                            packet.op = DOWNLOAD_FILE; 
-                            packet.bytes = bytes_read;
+                        packet_count = send_file(sock_answer, arq_name, DOWNLOAD_FILE);
+                        if(packet_count > 0){
+                            auto stop = high_resolution_clock::now();
+                            auto duration = duration_cast<microseconds>(stop-start);
                             
-                            if(file.eof()){
-                                packet.more = 0;
-                            }
-                            else{
-                                packet.more = 1;
-                            }
-
-                            send(sock_answer, &packet, sizeof(struct network_packet), 0);
-                            memset(&packet, 0, sizeof(struct network_packet)); 
-                            packet_count++;
-                            ack_count++;
-
-                            if(ack_count == PACK_ROOF){
-                                ack_count = 0;
-                                recv(sock_answer, &packet, sizeof(struct network_packet) , 0);
-                            }
-
+                            cout << "Arquivo enviado com sucesso!" << endl;
+                            cout << "Arquivo enviado com sucesso!" << endl;
+                            cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
+                            cout << packet_count << " pacotes enviados " << endl;
                         }
-                        auto stop = high_resolution_clock::now();
-                        auto duration = duration_cast<microseconds>(stop-start);
-
-                        cout << "Arquivo enviado com sucesso!" << endl;
-                        cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
-                        cout << packet_count << " pacotes enviados " << endl;
-
-                        file.close();
+                        else{
+                            cout << "Falha ao transmitir o arquivo: " << arq_name << endl;
+                        }
                     }
                     break;
                 case (DOWNLOAD_ALL_FILES):
                     {
-
                         const char *command = "find arqs -type f -printf \"%f\n\" > temp";
                 
                         system(command);
@@ -211,7 +240,12 @@ int main(int argc, char *argv[]){
 
                         if(!list_files.is_open()){
                             cout << "Erro ao abrir arquivo" << endl;
+                            packet.op = ERROR;
+                            strcpy(packet.buf, "FALHA AO ABRIR LISTA DE ARQUIVOS\n");
+                            send(sock_answer, &packet, sizeof(struct network_packet), 0);
+                            break;
                         }
+
                         string file_name;
                         auto list_start =  high_resolution_clock::now();
                         while(getline(list_files, file_name)){
@@ -237,53 +271,36 @@ int main(int argc, char *argv[]){
                             send(sock_answer, &packet, sizeof(struct network_packet), 0);
                             memset(&packet, 0, sizeof(struct network_packet));
 
-                            ifstream file(arq_name);
-                            
-                            if(!list_files.is_open()){
-                                cout << "Erro ao abrir arquivo" << endl;
-                            }
-
-                            short ack_count = 0;
                             packet_count = 0;
                             cout << "Enviando..." << endl;
-                            unsigned int bytes_read;
 
                             auto start = high_resolution_clock::now();
-                            while(!file.eof()){
-
-                                file.read(packet.buf, BUFF_SIZE);
-                                bytes_read = file.gcount(); 
-                                packet.op = DOWNLOAD_ALL_FILES; 
-                                packet.bytes = bytes_read;
-                                packet.more = 1;
+                            packet_count = send_file(sock_answer, arq_name, DOWNLOAD_FILE);
+                            if(packet_count > 0){
+                                auto stop = high_resolution_clock::now();
+                                auto duration = duration_cast<microseconds>(stop-start);
                                 
-                                send(sock_answer, &packet, sizeof(struct network_packet), 0);
-                                memset(&packet, 0, sizeof(struct network_packet)); 
-
-                                packet_count++;
-                                ack_count++;
-
-                                if(ack_count == PACK_ROOF){
-                                    cout << "100 pacotes enviados, aguardando ACK..." << endl;
-                                    ack_count = 0;
-                                    recv(sock_answer, &packet, sizeof(struct network_packet) , 0);
-                                    cout << "ACK Recebido!" << endl;
-                                }
-
+                                cout << "Arquivo enviado com sucesso!" << endl;
+                                cout << "Arquivo enviado com sucesso!" << endl;
+                                cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
+                                cout << packet_count << " pacotes enviados " << endl;
                             }
-                            auto stop = high_resolution_clock::now();
-                            auto duration = duration_cast<microseconds>(stop-start);
-
-                            cout << "Arquivo enviado com sucesso!" << endl;
-                            cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
-                            cout << packet_count << " pacotes enviados " << endl;
-
-                            file.close();
-
+                            else{
+                                cout << "Falha ao transmitir o arquivo: " << arq_name << endl;
+                            }
+ 
                             //Espera receber Ack para o proximo arquivo do cliente
-                            recv(sock_answer, &packet, sizeof(struct network_packet) , 0); 
-                            cout << "ACK Recebido: " << file_name << " foi recebido pelo cliente!" << endl;
-
+                            if(recv(sock_answer, &packet, sizeof(struct network_packet) , 0) < 0){
+                                cout << "Erro ao receber pacote! " << endl; 
+                                exit(1);
+                            }                                 
+                            
+                            if(packet.op == ACK)
+                                cout << "ACK Recebido: " << file_name << " foi recebido pelo cliente!" << endl;
+                            else {
+                                cout << "NACK Recebido: Encerrando trasmissão!" << endl; 
+                                break;
+                            }
                         }
 
                         packet.more = 0; 

@@ -17,6 +17,9 @@ using namespace std::chrono;
 #define DOWNLOAD_FILE 2
 #define DOWNLOAD_ALL_FILES 3
 #define ACK 4
+#define NACK 5
+#define ERROR 6
+
 
 #define PACK_ROOF 100
 
@@ -52,6 +55,76 @@ short chose_option(){
     return opt;
 }
 
+int receive_file_list(int socket){
+    struct network_packet packet;
+    int ack_count;
+
+    while(recv(socket, &packet, sizeof(struct network_packet) , 0) >= 0){
+
+        if(packet.op == ERROR){
+            cout << packet.buf;
+            return 0;
+        }
+
+        cout << packet.buf;
+        memset(&packet, 0, sizeof(struct network_packet));
+        ack_count++;
+
+        if(packet.more == 0)
+            break;
+
+        if(ack_count == PACK_ROOF){
+            ack_count  = 0; 
+            packet.op = ACK;
+            send(socket, &packet, sizeof(struct network_packet), 0);
+        }
+    }
+
+    return 1;
+}
+
+int receive_file(int socket, char *destination, int total_bytes){
+    struct network_packet packet;
+    short ack_count = 0;
+    int packet_count = 0;
+
+    ofstream file(destination);
+    
+    if(!file.is_open()){
+        cout << "FALHA AO ABRIR ARQUIVO!" << endl;
+        return -1; 
+    }             
+
+    while(total_bytes > 0 ){
+        
+        if(recv(socket, &packet, sizeof(struct network_packet) , 0) < 0){
+            cout << "Erro ao receber pacote! " << endl; 
+            exit(1);
+        }        
+        // auto timeC = high_resolution_clock::now();
+        // auto duration = duration_cast<microseconds>(timeC.time_since_epoch());
+
+        // cout << "Recebendo no momento: " << duration.count() << endl;
+        packet_count++;
+        ack_count++;
+
+        file.write(packet.buf, packet.bytes);
+
+        total_bytes -= packet.bytes; 
+        
+        if(ack_count == PACK_ROOF){
+            ack_count  = 0; 
+            packet.op = ACK;
+            send(socket, &packet, sizeof(struct network_packet), 0);
+        }
+        
+        memset(&packet, 0, sizeof(struct network_packet));
+    }
+
+    file.close();
+
+    return packet_count;
+}
 
 
 int main(int argc, char *argv[]){
@@ -89,6 +162,7 @@ int main(int argc, char *argv[]){
 
     short opt; 
     int bytes_rec; 
+    unsigned int packet_count;
     opt = chose_option();
 
     struct network_packet packet;
@@ -106,15 +180,12 @@ int main(int argc, char *argv[]){
                     send(sock_desc, &packet, sizeof(struct network_packet), 0);
                     memset(&packet, 0, sizeof(struct network_packet));
 
-                    cout << "*** Listando arquivos ****" << endl << endl; ;
 
-                    while((bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0)) >= 0){
-                        cout << packet.buf;
-                        memset(&packet, 0, sizeof(struct network_packet));
+                    cout << endl << "*** Listando arquivos ****" << endl << endl; ;
 
-                        if(packet.more == 0)
-                            break;
-                    }
+                    if(!receive_file_list(sock_desc))
+                        cout << "FALHA AO RECEBER LISTA DE ARQUIVOS" << endl;
+
                     cout << endl << "**************************" << endl;
 
                     cout << endl;
@@ -136,46 +207,40 @@ int main(int argc, char *argv[]){
                     send(sock_desc, &packet, sizeof(struct network_packet), 0);
                     memset(&packet, 0, sizeof(struct network_packet));
 
+                    unsigned int total_bytes; 
+
+                    if((bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0)) < 0){
+                        cout << "Erro ao receber pacote! " << endl; 
+                        exit(1);
+                    }
+
+                    if(packet.op == ERROR){
+                        cout << packet.buf; 
+                        break;
+                    }
+                    
                     memset(destination, 0 , MAX_ARQ_NAME + 1);
                     strcpy(destination, "received/");
                     strcat(destination, file_name);
-                    
-                    ofstream file;
-                    file.open(destination);
 
-                    int packet_count = 0;
-                    unsigned int bytes_left; 
+                    total_bytes = packet.bytes;
+                    cout << "Total Bytes: " << total_bytes << endl;
 
-                    bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
-                    bytes_left = packet.bytes;
-                    short ack_count = 0;
-
-                    while(bytes_left > 0 ){
-                        recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
-                        packet_count++;
-                        ack_count++;
-
-                        file.write(packet.buf, packet.bytes);
-
-                        bytes_left -= packet.bytes; 
-
-                        if(packet.more == 0)
-                            break;
+                    auto start = high_resolution_clock::now();
+                    packet_count = receive_file(sock_desc, destination, total_bytes);
+                    if(packet_count > 0){
+                        auto stop = high_resolution_clock::now();
+                        auto duration = duration_cast<microseconds>(stop-start);
                         
-                        memset(&packet, 0, sizeof(struct network_packet));
-
-                        if(ack_count == PACK_ROOF){
-                            ack_count  = 0; 
-                            packet.op = ACK;
-                            send(sock_desc, &packet, sizeof(struct network_packet), 0);
-                        }
+                       cout << "Transmissão Concluida! Arquivo " << file_name << endl;
+                        cout << "Salvo em: " << destination << endl;
+                        cout << packet_count << " packets received" << endl;
+                        cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
                     }
-
-                    file.close();
-
-                    cout << "Transmissão Concluida! Arquivo " << file_name << endl;
-                    cout << "Salvo em: " << destination << endl;
-                    cout << packet_count << " packets received" << endl;
+                    else{
+                        cout << "Falha ao receber o arquivo: " << destination << endl;
+                    }
+                  
                 }
                 break;
             
@@ -186,7 +251,15 @@ int main(int argc, char *argv[]){
                     send(sock_desc, &packet, sizeof(struct network_packet), 0);
                     memset(&packet, 0, sizeof(struct network_packet));
 
-                    bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
+                    if((bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0)) < 0){
+                        cout << "Erro ao receber pacote! " << endl; 
+                        exit(1);
+                    };
+
+                    if(packet.op == ERROR){
+                        cout << packet.buf; 
+                        break;
+                    }
 
                     auto list_start = high_resolution_clock::now();
                     while(packet.more != 0){ 
@@ -197,57 +270,41 @@ int main(int argc, char *argv[]){
                         strcpy(destination, "received/");
                         strcpy(file_name, packet.buf);
                         strcat(destination, packet.buf);
-                        
-                        ofstream file;
-                        file.open(destination);
-
+                    
                         int packet_count = 0;
-                        unsigned int bytes_left = packet.bytes;
+                        unsigned int total_bytes = packet.bytes;
 
                         cout << "Baixando: " << file_name << endl;
                         cout << "Tamanho: " << packet.bytes << endl;
 
-                        short ack_count = 0;
 
-                        while(bytes_left > 0 ){
-                            recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
-                            packet_count++;
-                            ack_count++;
-
-                            //cout << "Baixando... " << endl;
-
-                            file.write(packet.buf, packet.bytes);
-
-                            bytes_left -= packet.bytes; 
-
-                            /*if(packet.more == 0){
-                                cout << "Sem mais arquivos, encerrando execução \n" << endl;
-                                break;
-                            }*/
+                        auto start = high_resolution_clock::now();
+                        packet_count = receive_file(sock_desc, destination, total_bytes);
+                        if(packet_count > 0){
+                            auto stop = high_resolution_clock::now();
+                            auto duration = duration_cast<microseconds>(stop-start);
                             
-                            memset(&packet, 0, sizeof(struct network_packet));
+                            cout << "Transmissão Concluida! Arquivo " << file_name << endl;
+                            cout << "Salvo em: " << destination << endl;
+                            cout << packet_count << " packets received" << endl;
+                            cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
 
-                            if(ack_count == PACK_ROOF){
-                                ack_count  = 0; 
-                                packet.op = ACK;
-                                cout << "100 pacotes recebidos, enviando ACK!" << endl; 
-                                send(sock_desc, &packet, sizeof(struct network_packet), 0);
-                            }
+                            cout << "Enviando ACK: " << file_name << " recebido!" << endl;
+                            //Envia ACK do arquivo indicando que pode receber o proximo arquivo 
+                            packet.op = ACK; 
+                        }
+                        else{
+                            cout << "Falha ao receber o arquivo: " << destination << endl;
+                            packet.op = NACK;
                         }
 
-                        file.close();
-
-                        cout << "Transmissão Concluida! Arquivo " << file_name << endl;
-                        cout << "Salvo em: " << destination << endl;
-                        cout << packet_count << " packets received" << endl;
-
-                        cout << "Enviando ACK: " << file_name << " recebido!" << endl;
-                        //Envia ACK do arquivo indicando que pode receber o proximo arquivo 
-                        packet.op = ACK; 
                         send(sock_desc, &packet, sizeof(struct network_packet), 0);  
 
 
-                        recv(sock_desc, &packet, sizeof(struct network_packet) , 0);
+                        if((bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0)) < 0){
+                            cout << "Erro ao receber pacote! " << endl; 
+                            exit(1);
+                        }
                     }
                     auto list_stop = high_resolution_clock::now();
                     auto list_duration = duration_cast<microseconds>(list_stop-list_start);
