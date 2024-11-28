@@ -41,7 +41,7 @@ using namespace std::chrono;
 
 int send_file(int socket, char *file_name, short op_flag){
     struct network_packet packet;
-    int packet_count;
+    int packet_count = 0;
     short ack_count = 0;
 
     ifstream file(file_name); 
@@ -66,10 +66,7 @@ int send_file(int socket, char *file_name, short op_flag){
             packet.op = 1;
 
         send(socket, &packet, sizeof(struct network_packet), 0);
-        // auto timeC = high_resolution_clock::now();
-        // auto duration = duration_cast<microseconds>(timeC.time_since_epoch());
 
-        // cout << "Enviando no momento " << duration.count() << endl;
         memset(&packet, 0, sizeof(struct network_packet)); 
         packet_count++;
         ack_count++;
@@ -219,11 +216,15 @@ int main(int argc, char *argv[]){
                         if(packet_count > 0){
                             auto stop = high_resolution_clock::now();
                             auto duration = duration_cast<microseconds>(stop-start);
+                            double throughput = file_size/ duration.count();
                             
                             cout << "Arquivo enviado com sucesso!" << endl;
                             cout << "Arquivo enviado com sucesso!" << endl;
                             cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
                             cout << packet_count << " pacotes enviados " << endl;
+                            cout.precision(3);
+                            cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl; 
+                            cout << endl;
                         }
                         else{
                             cout << "Falha ao transmitir o arquivo: " << arq_name << endl;

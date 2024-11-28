@@ -101,10 +101,7 @@ int receive_file(int socket, char *destination, int total_bytes){
             cout << "Erro ao receber pacote! " << endl; 
             exit(1);
         }        
-        // auto timeC = high_resolution_clock::now();
-        // auto duration = duration_cast<microseconds>(timeC.time_since_epoch());
-
-        // cout << "Recebendo no momento: " << duration.count() << endl;
+        
         packet_count++;
         ack_count++;
 
@@ -134,7 +131,7 @@ int main(int argc, char *argv[]){
     char *host; 
 
     if(argc != 3){
-        cout << "Uso correto: client <Nome Serv> <porta>" << endl;
+        cout << "Uso correto: client <Ip Serv> <porta>" << endl;
         exit(1); 
     }
 
