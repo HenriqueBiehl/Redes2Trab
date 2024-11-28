@@ -220,22 +220,34 @@ int main(int argc, char *argv[]){
                 recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i);
                 bytes_left = packet.bytes;
 
-                cout << "packet = " << packet.bytes << endl;
+                cout << "Total Bytes: " << packet.bytes << endl;
 
+                auto start = high_resolution_clock::now();
                 packet_count = receive_file(bytes_left, newfile, sockdescr, sa, i);
 
                 if (packet_count < 0) {
-                    cout << "Erro ao receber pacote! " << endl; 
-                    exit(1);
+                    cout << "Falha ao receber o arquivo: " << newfile << endl;
+                }
+                else {
+                    auto stop = high_resolution_clock::now();
+                    auto duration = duration_cast<microseconds>(stop-start);
+                    auto throughput = filesystem::file_size(newfile) / duration.count();
+                    
+                    cout << "Transmissão Concluida! Arquivo " << name << endl;
+                    cout << "Salvo em: " << newfile << endl;
+                    cout << packet_count << " pacotes recebidos!" << endl;
+                    cout << "Tempo de transmissão: " << duration.count() << " microssegundos" << endl;
+                    cout.precision(3);
+                    cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl; 
                 }
 
-                cout << "Transmissão Concluida! Arquivo " << name << " salvo em: " << newfile << endl;
-                cout << packet_count << " packets received" << endl << endl;
+                cout << endl << "--------------------------" << endl;
 
                 // -c flag compara o arquivo original com o recebido(se o original existir)
                 if (argc == 4) {
                     if (strcmp(argv[3], "-c") == 0) {
                         compare_file(name);
+                        cout << endl << "--------------------------" << endl;
                     }
                 }
             }
@@ -250,6 +262,7 @@ int main(int argc, char *argv[]){
 
                 recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i);
 
+                unsigned int bytes_received = 0;
                 auto list_start = high_resolution_clock::now();
                 while(packet.more != 0){ 
                     
@@ -271,6 +284,8 @@ int main(int argc, char *argv[]){
 
                     // packet_count = receive_file(bytes_left, newfile, sockdescr, sa, i);
 
+                    auto start = high_resolution_clock::now();
+
                     while(1){
                         recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i);
                         packet_count++;
@@ -288,17 +303,33 @@ int main(int argc, char *argv[]){
 
                     file.close();
 
-                    cout << "Transmissão Concluida! Arquivo " << name << endl;
-                    cout << "Salvo em: " << newfile << endl;
-                    cout << packet_count << " packets received" << endl;
+                    if (packet_count == 0) {
+                        auto stop = high_resolution_clock::now();
+                        auto duration = duration_cast<microseconds>(stop-start);
+                        auto throughput = filesystem::file_size(newfile) / duration.count();
+
+                        cout << "Transmissão Concluida! Arquivo " << name << endl;
+                        cout << "Salvo em: " << newfile << endl;
+                        cout << packet_count << " packets received" << endl;
+                        cout << "Tempo de transmissão: " << duration.count() << " microssegundos" << endl;
+                        cout.precision(3);
+                        cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl; 
+
+                        bytes_received += filesystem::file_size(newfile);
+                    }
 
                     recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i);
                 }
                 auto list_stop = high_resolution_clock::now();
                 auto list_duration = duration_cast<microseconds>(list_stop-list_start);
+                auto list_throughput = bytes_received / list_duration.count();
                 
-                cout << "Todos os arquivos foram recebidos com sucesso!" << endl;
-                cout << "Tempo de transmissão de todos os arquivos: " << list_duration.count() << " ms" << endl;
+                cout << "Todos os arquivos foram recebidos!" << endl;
+                cout << "Tempo de transmissão de todos os arquivos: " << list_duration.count() << " microssegundos" << endl;
+                cout.precision(3);
+                cout << "Taxa de Transmissão: " << list_throughput << " MB/s" << endl; 
+                
+                cout << endl << "**************************" << endl;
 
                 if (argc == 4) {
                     if (strcmp(argv[3], "-c") == 0) {
@@ -314,6 +345,7 @@ int main(int argc, char *argv[]){
                             compare_file(filename.c_str());
                         }
                         system("rm -f temp");
+                        cout << endl << "--------------------------" << endl;
                     }
                 }
 

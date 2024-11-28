@@ -127,10 +127,24 @@ int main(int argc, char *argv[]){
                 system(command);
 
                 char temp[] = "temp";
+
+                auto start =  high_resolution_clock::now();
                 packet_count = send_file(sockdescr, temp, LIST_FILE, client, i);
 
-                cout << "Lista enviada com sucesso!" << endl;
-                cout << packet_count << " pacotes enviados " << endl;
+                if (packet_count > 0) {
+                    auto stop = high_resolution_clock::now();
+                    auto duration = duration_cast<microseconds>(stop-start);
+                    double throughput = (double) filesystem::file_size(temp)/ duration.count();
+
+                    cout << endl;
+                    cout << "Lista enviada com sucesso!" << endl;
+                    cout << "Tempo de transmissão de toda a lista: " << duration.count() << " microssegundos" << endl;
+                    cout << packet_count << " pacotes enviados " << endl;
+                    cout.precision(3);
+                    cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl;
+                }
+                else
+                    cout << "Falha ao transmitir a lista de arquivos!";
 
                 system("rm -f temp");
             }
@@ -150,23 +164,27 @@ int main(int argc, char *argv[]){
 
                 sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, i);
 
-                unsigned int checkpoint_size = file_size / 20;
-                unsigned int checkpoint = checkpoint_size;
-
-                cout << file_size << endl;
-                cout << checkpoint_size << endl;
-                cout << checkpoint << endl;
-
                 auto start = high_resolution_clock::now();
 
                 packet_count = send_file(sockdescr, arq_name, DOWNLOAD_FILE, client, i);
 
-                auto stop = high_resolution_clock::now();
-                auto duration = duration_cast<microseconds>(stop-start);
+                if(packet_count > 0){
+                    auto stop = high_resolution_clock::now();
+                    auto duration = duration_cast<microseconds>(stop-start);
+                    double throughput = file_size/ duration.count();
+                    
+                    cout << "Arquivo enviado com sucesso!" << endl;
+                    cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
+                    cout << packet_count << " pacotes enviados " << endl;
+                    cout.precision(3);
+                    cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl; 
+                    cout << endl;
+                }
+                else {
+                    cout << "Falha ao transmitir o arquivo: " << arq_name << endl;
+                }
 
-                cout << "Arquivo enviado com sucesso!" << endl;
-                cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
-                cout << packet_count << " pacotes enviados " << endl;
+                cout << endl << "**************************" << endl;
 
                 break;
                 }
@@ -183,6 +201,7 @@ int main(int argc, char *argv[]){
                     cout << "Erro ao abrir arquivo" << endl;
                 }
                 string file_name;
+                double bytes_transmitted = 0;
                 auto list_start =  high_resolution_clock::now();
                 while(getline(list_files, file_name)){
 
@@ -214,12 +233,23 @@ int main(int argc, char *argv[]){
 
                     packet_count = send_file(sockdescr, arq_name, DOWNLOAD_ALL_FILES, client, i);
 
-                    auto stop = high_resolution_clock::now();
-                    auto duration = duration_cast<microseconds>(stop-start);
+                    if(packet_count > 0){
+                        auto stop = high_resolution_clock::now();
+                        auto duration = duration_cast<microseconds>(stop-start);
+                        double throughput = (double) file_size/ duration.count(); 
+                        
+                        cout << endl << "--------------------------" << endl;
+                        cout << "Arquivo enviado com sucesso!" << endl;
+                        cout << "Tempo de transmissão: " << duration.count() << " microssegundos" << endl;
+                        cout << packet_count << " pacotes enviados " << endl;
+                        cout.precision(3);
+                        cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl; 
 
-                    cout << "Arquivo enviado com sucesso!" << endl;
-                    cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
-                    cout << packet_count << " pacotes enviados " << endl;
+                        bytes_transmitted += file_size;
+                    }
+                    else{
+                        cout << "Falha ao transmitir o arquivo: " << arq_name << endl;
+                    }
 
                     // Espera pro proximo arquivo
                     usleep(6000);
@@ -233,9 +263,15 @@ int main(int argc, char *argv[]){
 
                 auto list_stop = high_resolution_clock::now();
                 auto list_duration = duration_cast<microseconds>(list_stop-list_start);
+                auto throughput_list = bytes_transmitted/list_duration.count();
 
                 cout << "Todos os arquivos foram enviados com sucesso!" << endl;
-                cout << "Tempo de transmissão de toda a lista: " << list_duration.count() << " ms" << endl;
+                cout << "Tempo de transmissão de toda a lista: " << list_duration.count() << " microssegundos" << endl;
+                cout.precision(3);
+                cout << "Taxa de Transmissão de " << bytes_transmitted << " :" << throughput_list << " MB/s" << endl; 
+                cout << endl << "--------------------------" << endl;
+                list_files.close();
+                system("rm -f temp");
 
                 list_files.close();
                 system("rm -f temp");
