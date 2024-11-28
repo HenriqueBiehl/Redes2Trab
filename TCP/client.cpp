@@ -8,6 +8,7 @@
 #include <string.h>
 #include <string.h>
 #include <chrono>
+#include <filesystem>
 
 using namespace std;
 using namespace std::chrono;
@@ -58,17 +59,19 @@ short chose_option(){
 int receive_file_list(int socket){
     struct network_packet packet;
     int ack_count;
+    int packet_count = 0;
 
     while(recv(socket, &packet, sizeof(struct network_packet) , 0) >= 0){
 
         if(packet.op == ERROR){
             cout << packet.buf;
-            return 0;
+            return -1;
         }
 
         cout << packet.buf;
         memset(&packet, 0, sizeof(struct network_packet));
         ack_count++;
+        packet_count++;
 
         if(packet.more == 0)
             break;
@@ -80,7 +83,7 @@ int receive_file_list(int socket){
         }
     }
 
-    return 1;
+    return packet_count;
 }
 
 int receive_file(int socket, char *destination, int total_bytes){
@@ -179,12 +182,13 @@ int main(int argc, char *argv[]){
 
 
                     cout << endl << "*** Listando arquivos ****" << endl << endl; ;
-
-                    if(!receive_file_list(sock_desc))
+                    
+                    packet_count = receive_file_list(sock_desc);
+                    if(packet_count < 0)
                         cout << "FALHA AO RECEBER LISTA DE ARQUIVOS" << endl;
-
+                    
                     cout << endl << "**************************" << endl;
-
+                    
                     cout << endl;
                 }
                 break; 
@@ -193,7 +197,7 @@ int main(int argc, char *argv[]){
                 {
                     char file_name[MAX_ARQ_NAME+1];
                     char destination[MAX_ARQ_NAME+1];
-
+                    cout << endl << "--------------------------" << endl;
                     cout << "Digite nome do arquivo:" << endl; 
                     cin >> file_name;
 
@@ -221,22 +225,28 @@ int main(int argc, char *argv[]){
                     strcat(destination, file_name);
 
                     total_bytes = packet.bytes;
-                    cout << "Total Bytes: " << total_bytes << endl;
+                    cout << endl << "Total Bytes: " << total_bytes << endl;
 
                     auto start = high_resolution_clock::now();
                     packet_count = receive_file(sock_desc, destination, total_bytes);
                     if(packet_count > 0){
                         auto stop = high_resolution_clock::now();
                         auto duration = duration_cast<microseconds>(stop-start);
+                        auto throughput = filesystem::file_size(destination) / duration.count();
                         
-                       cout << "Transmissão Concluida! Arquivo " << file_name << endl;
+                        cout << "Transmissão Concluida! Arquivo " << file_name << endl;
                         cout << "Salvo em: " << destination << endl;
-                        cout << packet_count << " packets received" << endl;
-                        cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
+                        cout << packet_count << " pacotes recebidos!" << endl;
+                        cout << "Tempo de transmissão: " << duration.count() << " microssegundos" << endl;
+                        cout.precision(3);
+                        cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl; 
+                        
                     }
                     else{
                         cout << "Falha ao receber o arquivo: " << destination << endl;
                     }
+                    
+                    cout << endl << "--------------------------" << endl;
                   
                 }
                 break;
@@ -258,6 +268,7 @@ int main(int argc, char *argv[]){
                         break;
                     }
 
+                    unsigned int bytes_received = 0;
                     auto list_start = high_resolution_clock::now();
                     while(packet.more != 0){ 
                         
@@ -271,32 +282,39 @@ int main(int argc, char *argv[]){
                         int packet_count = 0;
                         unsigned int total_bytes = packet.bytes;
 
+                        cout << endl;
                         cout << "Baixando: " << file_name << endl;
                         cout << "Tamanho: " << packet.bytes << endl;
-
 
                         auto start = high_resolution_clock::now();
                         packet_count = receive_file(sock_desc, destination, total_bytes);
                         if(packet_count > 0){
                             auto stop = high_resolution_clock::now();
                             auto duration = duration_cast<microseconds>(stop-start);
-                            
+                            auto throughput = filesystem::file_size(destination) / duration.count();
+
                             cout << "Transmissão Concluida! Arquivo " << file_name << endl;
                             cout << "Salvo em: " << destination << endl;
                             cout << packet_count << " packets received" << endl;
-                            cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
+                            cout << "Tempo de transmissão: " << duration.count() << " microssegundos" << endl;
+                            cout.precision(3);
+                            cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl; 
 
-                            cout << "Enviando ACK: " << file_name << " recebido!" << endl;
+                            bytes_received += filesystem::file_size(destination);
+
+                            cout << endl << "Enviando ACK: " << file_name << " recebido!" << endl;
                             //Envia ACK do arquivo indicando que pode receber o proximo arquivo 
                             packet.op = ACK; 
                         }
                         else{
                             cout << "Falha ao receber o arquivo: " << destination << endl;
+                            cout << "Enviando NACK!" << endl;
                             packet.op = NACK;
                         }
 
-                        send(sock_desc, &packet, sizeof(struct network_packet), 0);  
+                        cout << endl << "--------------------------" << endl;
 
+                        send(sock_desc, &packet, sizeof(struct network_packet), 0);  
 
                         if((bytes_rec = recv(sock_desc, &packet, sizeof(struct network_packet) , 0)) < 0){
                             cout << "Erro ao receber pacote! " << endl; 
@@ -305,9 +323,15 @@ int main(int argc, char *argv[]){
                     }
                     auto list_stop = high_resolution_clock::now();
                     auto list_duration = duration_cast<microseconds>(list_stop-list_start);
+                    auto list_throughput = bytes_received / list_duration.count();
                     
                     cout << "Todos os arquivos foram recebidos com sucesso!" << endl;
-                    cout << "Tempo de transmissão de todos os arquivos: " << list_duration.count() << " ms" << endl;
+                    cout << "Tempo de transmissão de todos os arquivos: " << list_duration.count() << " microssegundos" << endl;
+                    cout.precision(3);
+                    cout << "Taxa de Transmissão: " << list_throughput << " MB/s" << endl; 
+                    
+                    cout << endl << "**************************" << endl;
+
 
                 }
                 break; 
