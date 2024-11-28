@@ -87,14 +87,6 @@ int main(int argc, char *argv[]){
         exit(1); 
     }
 
-    /*if(write(sock_desc, dados, strlen(dados)) != (ssize_t) strlen(dados)){
-        cout << "Não consegui transmitir" << endl;
-        exit(1); 
-    }
-
-    cout << "Transmiti: " << dados << endl;*/
-
-
     short opt; 
     int bytes_rec; 
     opt = chose_option();
@@ -278,4 +270,4 @@ int main(int argc, char *argv[]){
     cout << "Conexão encerrada." << endl;
 
     return 0;
-}    unsigned int file_size; 
+}    

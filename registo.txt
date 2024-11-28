@@ -1,0 +1,23 @@
+
+UDP - André
+
+- Não tem que fazer a conexão, diferentemente do TCP
+- Tem opção de Lista, Download 
+- UDP transmite bem rápido, mas perde bastante pacotes
+- Perda varia bastante, pode ser causa do buffer que armazena as coisas
+- Principal causa da perda de pacote pode ser o controle de fluxo do cliente, que basicamente congestiona o cliente
+- Tem flag especial que compara com o arquivo do servidor
+- Falta um calculo para saber quantos bytes chegaram, fazer funcionar em 2 máquinas e o download de tudo
+
+TCP - Henrique 
+- Escrever
+
+O que falta 
+- Reuniãozinha no Dinf as 15h30 quinta feira
+- Falta um calculo para saber quantos bytes chegaram, fazer funcionar em 2 máquinas e o download de tudo (UDP)
+- Falta, nos 2, o calculo de taxa de transmissão 
+- Adicionar os "mini-protocolos" da parte do TCP no UDP
+- Arrumar o código em função
+- Comentar o código
+- Fazer os logs do programa e do dev 
+- Escrever o Relatório (Henrique escreve o Relatório e André faz o HTML)
