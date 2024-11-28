@@ -35,6 +35,43 @@ struct network_packet{
 using namespace std;
 using namespace std::chrono;
 
+int send_file(int sockdescr, char *arq_name, short op_flag, struct sockaddr_in client, int i) {
+    struct network_packet packet;
+    int packet_count = 0;
+
+    ifstream file(arq_name);
+
+    if(!file.is_open()){
+        cout << "Erro ao abrir arquivo" << endl;
+    }
+    
+    memset(&packet, 0, sizeof(struct network_packet));
+    streamsize bytes_read;
+
+    while(!file.eof()){
+        file.read(packet.buf, BUFF_SIZE);
+        bytes_read = file.gcount();
+        packet.op = op_flag;
+        packet.bytes = bytes_read;
+
+        if(file.eof()){
+            packet.more = 0;
+        }
+        else{
+            packet.more = 1;
+        }
+
+        sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, i);
+        memset(&packet, 0, sizeof(struct network_packet));
+
+        packet_count++;
+    }
+
+    file.close();
+
+    return packet_count;
+}
+
 int main(int argc, char *argv[]){
     int sockdescr;
     unsigned int i;
@@ -89,35 +126,12 @@ int main(int argc, char *argv[]){
         
                 system(command);
 
-                ifstream file("temp"); 
+                char temp[] = "temp";
+                packet_count = send_file(sockdescr, temp, LIST_FILE, client, i);
 
-                if(!file.is_open()){
-                    cout << "Erro ao abrir arquivo" << endl;
-                }
-                
-                memset(&packet, 0, sizeof(struct network_packet)); 
-                streamsize bytes_read; 
-                
-                while(!file.eof()){
-
-                    file.read(packet.buf, BUFF_SIZE);
-                    bytes_read = file.gcount(); 
-                    packet.op = LIST_FILE; 
-                    packet.bytes = bytes_read;
-
-                    if(file.eof()){
-                        packet.more = 0;
-                    }
-                    else{
-                        packet.more = 1;
-                    }
-
-                    sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, i);
-                    memset(&packet, 0, sizeof(struct network_packet)); 
-                }
-
-                file.close();
                 cout << "Lista enviada com sucesso!" << endl;
+                cout << packet_count << " pacotes enviados " << endl;
+
                 system("rm -f temp");
             }
             break;
@@ -128,15 +142,6 @@ int main(int argc, char *argv[]){
                 memset(arq_name, 0 , MAX_ARQ_NAME + 1);
                 strcpy(arq_name, "server_arqs/");
                 strcat(arq_name, packet.buf);
-
-                ifstream file(arq_name);
-
-                if(!file.is_open()){
-                    cout << "Erro ao abrir arquivo" << endl;
-                }
-                
-                memset(&packet, 0, sizeof(struct network_packet));
-                streamsize bytes_read;
 
                 unsigned int file_size = filesystem::file_size(arq_name);
 
@@ -153,25 +158,9 @@ int main(int argc, char *argv[]){
                 cout << checkpoint << endl;
 
                 auto start = high_resolution_clock::now();
-                while(!file.eof()){
-                    file.read(packet.buf, BUFF_SIZE);
-                    bytes_read = file.gcount();
-                    packet.op = DOWNLOAD_FILE;
-                    packet.bytes = bytes_read;
 
-                    if(file.eof()){
-                        packet.more = 0;
-                    }
-                    else{
-                        packet.more = 1;
-                    }
+                packet_count = send_file(sockdescr, arq_name, DOWNLOAD_FILE, client, i);
 
-                    // send(sockdescr, &packet, sizeof(struct network_packet), 0);
-                    sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, i);
-                    memset(&packet, 0, sizeof(struct network_packet));
-
-                    packet_count++;
-                }
                 auto stop = high_resolution_clock::now();
                 auto duration = duration_cast<microseconds>(stop-start);
 
@@ -185,7 +174,7 @@ int main(int argc, char *argv[]){
             case (DOWNLOAD_ALL_FILES):
                 {
                 const char *command = "find server_arqs -type f -printf \"%f\n\" > temp";
-        
+
                 system(command);
 
                 ifstream list_files("temp"); 
@@ -196,7 +185,7 @@ int main(int argc, char *argv[]){
                 string file_name;
                 auto list_start =  high_resolution_clock::now();
                 while(getline(list_files, file_name)){
-                    
+
                     cout << "Enviando: " << file_name << endl;
 
                     char arq_name[MAX_ARQ_NAME + 1];
@@ -218,30 +207,13 @@ int main(int argc, char *argv[]){
                     sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, i);
                     memset(&packet, 0, sizeof(struct network_packet));
 
-                    ifstream file(arq_name);
-                    
-                    if(!list_files.is_open()){
-                        cout << "Erro ao abrir arquivo" << endl;
-                    }
-
                     packet_count = 0;
                     cout << "Enviando..." << endl;
-                    unsigned int bytes_read;
 
                     auto start = high_resolution_clock::now();
-                    while(!file.eof()){
 
-                        file.read(packet.buf, BUFF_SIZE);
-                        bytes_read = file.gcount(); 
-                        packet.op = DOWNLOAD_ALL_FILES; 
-                        packet.bytes = bytes_read;
-                        packet.more = 1;
-                        
-                        sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, i);
-                        memset(&packet, 0, sizeof(struct network_packet)); 
+                    packet_count = send_file(sockdescr, arq_name, DOWNLOAD_ALL_FILES, client, i);
 
-                        packet_count++;
-                    }
                     auto stop = high_resolution_clock::now();
                     auto duration = duration_cast<microseconds>(stop-start);
 
@@ -250,12 +222,10 @@ int main(int argc, char *argv[]){
                     cout << packet_count << " pacotes enviados " << endl;
 
                     // Espera pro proximo arquivo
-                    usleep(150);
+                    usleep(6000);
 
                     packet.op = NEXT_FILE;
                     sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, i);
-
-                    file.close();
                 }
 
                 packet.more = 0; 
