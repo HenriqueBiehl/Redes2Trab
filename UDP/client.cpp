@@ -49,7 +49,97 @@ short chose_option(){
     return opt;
 }
 
+int receive_file_list(int sockdescr, struct sockaddr_in sa, unsigned int i) {
+    int bytes_rec;
+    struct network_packet packet;
+    int packet_count = 0;
 
+    while((bytes_rec = recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i)) >= 0){
+        packet_count++;
+        cout << packet.buf;
+        memset(&packet, 0, sizeof(struct network_packet));
+
+        if(packet.more == 0 || packet.op == NEXT_FILE)
+            break;
+    }
+    return packet_count;
+}
+
+int receive_file(int bytes_left, char* newfile, int sockdescr, sockaddr_in sa, unsigned int i) {
+    struct network_packet packet;
+    int packet_count = 0;
+
+    ofstream file;
+    file.open(newfile);
+
+    while(bytes_left > 0 ){
+        packet_count++;
+        recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i);
+
+        file.write(packet.buf, packet.bytes);
+
+        bytes_left -= packet.bytes; 
+
+        if(packet.more == 0)
+            break;
+        
+        memset(&packet, 0, sizeof(struct network_packet));
+    }
+
+    file.close();
+    return packet_count++;
+}
+
+void compare_file(const char* filename) {
+    cout << "No arquivo " << filename << ":" << endl;
+    char original_name[MAX_ARQ_NAME+1];
+    char received_name[MAX_ARQ_NAME+1];
+
+    memset(original_name, 0 , MAX_ARQ_NAME + 1);
+    strcpy(original_name, "server_arqs/");
+    strcat(original_name, filename);
+
+    memset(received_name, 0 , MAX_ARQ_NAME + 1);
+    strcpy(received_name, "client_arqs/");
+    strcat(received_name, filename);
+
+    ifstream original;
+    ifstream received;
+
+    original.open(original_name);
+    received.open(received_name);
+
+    std::filesystem::path p_original{original_name};
+    std::filesystem::path p_received{received_name};
+
+    if (!received.fail()) {
+        long int original_size = std::filesystem::file_size(p_original);
+        long int received_size = std::filesystem::file_size(p_received);
+        long int diff = original_size - received_size;
+        int percentage = 100 * received_size / original_size;
+
+        char c1[2], c2[2];
+        int diff_bytes = 0;
+
+        cout << "Um total de " << diff << " bytes não chegaram, sendo que cerca de " << percentage << "\% dos bytes foram transmitidos" << endl;
+
+        while (!original.eof() && !received.eof()) {
+            original.read(c1, 1);
+            received.read(c2, 1);
+            // cout << "c1 = " << c1[0] << " c2 = " << c2[0] << endl;
+            if (c1[0] != c2[0]) {
+                diff_bytes++;
+            }
+        }
+
+        int percentage_diff = 100 * diff_bytes / received_size;
+
+        cout << "Um total de " << diff_bytes << " bytes chegaram errado, sendo que cerca de "
+            << percentage_diff << "\% dos bytes chegaram com algum problema(Ex. Ordem errada, valor incorreto, etc.)"
+            << endl;
+        cout << endl;
+    }
+}
 
 int main(int argc, char *argv[]){
     int sockdescr;
@@ -81,7 +171,6 @@ int main(int argc, char *argv[]){
     }
 
     short opt;
-    int bytes_rec;
     opt = chose_option();
 
     struct network_packet packet;
@@ -99,13 +188,9 @@ int main(int argc, char *argv[]){
 
                 cout << "*** Listando arquivos ****" << endl << endl;
 
-                while((bytes_rec = recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i)) >= 0){
-                    cout << packet.buf;
-                    memset(&packet, 0, sizeof(struct network_packet));
+                if(!receive_file_list(sockdescr, sa, i))
+                    cout << "FALHA AO RECEBER LISTA DE ARQUIVOS" << endl;
 
-                    if(packet.more == 0)
-                        break;
-                }
                 cout << endl << "**************************" << endl;
 
                 break;
@@ -128,33 +213,21 @@ int main(int argc, char *argv[]){
                 memset(newfile, 0 , MAX_ARQ_NAME + 1);
                 strcpy(newfile, "client_arqs/");
                 strcat(newfile, name);
-                
-                ofstream file;
-                file.open(newfile);
 
                 int packet_count = 0;
                 unsigned int bytes_left;
 
-                bytes_rec = recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i);
+                recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i);
                 bytes_left = packet.bytes;
 
                 cout << "packet = " << packet.bytes << endl;
 
-                while(bytes_left > 0 ){
-                    packet_count++;
-                    recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i);
+                packet_count = receive_file(bytes_left, newfile, sockdescr, sa, i);
 
-                    file.write(packet.buf, packet.bytes);
-
-                    bytes_left -= packet.bytes; 
-
-                    if(packet.more == 0)
-                        break;
-                    
-                    memset(&packet, 0, sizeof(struct network_packet));
+                if (packet_count < 0) {
+                    cout << "Erro ao receber pacote! " << endl; 
+                    exit(1);
                 }
-
-                file.close();
 
                 cout << "Transmissão Concluida! Arquivo " << name << " salvo em: " << newfile << endl;
                 cout << packet_count << " packets received" << endl << endl;
@@ -162,44 +235,7 @@ int main(int argc, char *argv[]){
                 // -c flag compara o arquivo original com o recebido(se o original existir)
                 if (argc == 4) {
                     if (strcmp(argv[3], "-c") == 0) {
-                        char original_name[MAX_ARQ_NAME+1];;
-                        memset(original_name, 0 , MAX_ARQ_NAME + 1);
-                        strcpy(original_name, "server_arqs/");
-                        strcat(original_name, name);
-
-                        ifstream original;
-                        ifstream received;
-
-                        original.open(original_name);
-                        received.open(newfile);
-
-                        std::filesystem::path p_original{original_name};
-                        std::filesystem::path p_received{newfile};
-                        char c1[2], c2[2];
-                        int diff_bytes = 0;
-
-                        if (!received.fail()) {
-                            long int original_size = std::filesystem::file_size(p_original);
-                            long int received_size = std::filesystem::file_size(p_received);
-                            long int diff = original_size - received_size;
-                            int percentage = 100 * received_size / original_size;
-                            cout << "Um total de " << diff << " bytes não chegaram, sendo que cerca de " << percentage << "\% dos bytes foram transmitidos" << endl;
-
-                            while (!original.eof() && !received.eof()) {
-                                original.read(c1, 1);
-                                received.read(c2, 1);
-                                if (c1[0] != c2[0]) {
-                                    diff_bytes++;
-                                }
-                            }
-
-                            int percentage_diff = 100 * diff_bytes / received_size;
-
-                            cout << "Um total de " << diff_bytes << " bytes chegaram errado, sendo que cerca de " << percentage_diff << "\% dos bytes chegaram com algum problema" << endl;
-                        }
-
-                        original.close();
-                        received.close();
+                        compare_file(name);
                     }
                 }
             }
@@ -212,7 +248,7 @@ int main(int argc, char *argv[]){
                 sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, sizeof(sa));
                 memset(&packet, 0, sizeof(struct network_packet));
 
-                bytes_rec = recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i);
+                recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i);
 
                 auto list_start = high_resolution_clock::now();
                 while(packet.more != 0){ 
@@ -232,6 +268,8 @@ int main(int argc, char *argv[]){
 
                     cout << "Baixando: " << name << endl;
                     cout << "Tamanho: " << packet.bytes << endl;
+
+                    // packet_count = receive_file(bytes_left, newfile, sockdescr, sa, i);
 
                     while(1){
                         recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i);
@@ -273,58 +311,7 @@ int main(int argc, char *argv[]){
                         string filename;
 
                         while (getline(files, filename)) {
-                            cout << "No arquivo " << filename << ":" << endl;
-                            char original_name[MAX_ARQ_NAME+1];
-                            char received_name[MAX_ARQ_NAME+1];
-
-                            memset(original_name, 0 , MAX_ARQ_NAME + 1);
-                            strcpy(original_name, "server_arqs/");
-                            strcat(original_name, filename.c_str());
-
-                            memset(received_name, 0 , MAX_ARQ_NAME + 1);
-                            strcpy(received_name, "client_arqs/");
-                            strcat(received_name, filename.c_str());
-
-                            ifstream original;
-                            ifstream received;
-
-                            original.open(original_name);
-                            received.open(received_name);
-
-                            std::filesystem::path p_original{original_name};
-                            std::filesystem::path p_received{received_name};
-
-                            if (!received.fail()) {
-                                long int original_size = std::filesystem::file_size(p_original);
-                                long int received_size = std::filesystem::file_size(p_received);
-                                long int diff = original_size - received_size;
-                                int percentage = 100 * received_size / original_size;
-
-                                char c1[2], c2[2];
-                                int diff_bytes = 0;
-
-                                cout << "Um total de " << diff << " bytes não chegaram, sendo que cerca de " << percentage << "\% dos bytes foram transmitidos" << endl;
-
-                                while (!original.eof() && !received.eof()) {
-                                    original.read(c1, 1);
-                                    received.read(c2, 1);
-                                    // cout << "c1 = " << c1[0] << " c2 = " << c2[0] << endl;
-                                    if (c1[0] != c2[0]) {
-                                        diff_bytes++;
-                                    }
-                                }
-
-                                int percentage_diff = 100 * diff_bytes / received_size;
-
-                                cout << "Um total de " << diff_bytes << " bytes chegaram errado, sendo que cerca de "
-                                    << percentage_diff << "\% dos bytes chegaram com algum problema(Ex. Ordem errada, valor incorreto, etc.)"
-                                    << endl;
-                                cout << endl;
-                            }
-
-                            original.close();
-                            received.close();
-                            usleep(300000);
+                            compare_file(filename.c_str());
                         }
                         system("rm -f temp");
                     }

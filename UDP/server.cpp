@@ -54,7 +54,7 @@ int send_file(int sockdescr, char *arq_name, short op_flag, struct sockaddr_in c
         packet.op = op_flag;
         packet.bytes = bytes_read;
 
-        if(file.eof()){
+        if(file.eof() && op_flag != DOWNLOAD_ALL_FILES){
             packet.more = 0;
         }
         else{
