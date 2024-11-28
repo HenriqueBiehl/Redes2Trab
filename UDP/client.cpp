@@ -175,6 +175,8 @@ int main(int argc, char *argv[]){
 
                         std::filesystem::path p_original{original_name};
                         std::filesystem::path p_received{newfile};
+                        char c1[2], c2[2];
+                        int diff_bytes = 0;
 
                         if (!received.fail()) {
                             long int original_size = std::filesystem::file_size(p_original);
@@ -182,6 +184,18 @@ int main(int argc, char *argv[]){
                             long int diff = original_size - received_size;
                             int percentage = 100 * received_size / original_size;
                             cout << "Um total de " << diff << " bytes não chegaram, sendo que cerca de " << percentage << "\% dos bytes foram transmitidos" << endl;
+
+                            while (!original.eof() && !received.eof()) {
+                                original.read(c1, 1);
+                                received.read(c2, 1);
+                                if (c1[0] != c2[0]) {
+                                    diff_bytes++;
+                                }
+                            }
+
+                            int percentage_diff = 100 * diff_bytes / received_size;
+
+                            cout << "Um total de " << diff_bytes << " bytes chegaram errado, sendo que cerca de " << percentage_diff << "\% dos bytes chegaram com algum problema" << endl;
                         }
 
                         original.close();
@@ -240,35 +254,6 @@ int main(int argc, char *argv[]){
                     cout << "Salvo em: " << newfile << endl;
                     cout << packet_count << " packets received" << endl;
 
-                    if (argc == 4) {
-                        if (strcmp(argv[3], "-c") == 0) {
-                            char original_name[MAX_ARQ_NAME+1];;
-                            memset(original_name, 0 , MAX_ARQ_NAME + 1);
-                            strcpy(original_name, "server_arqs/");
-                            strcat(original_name, name);
-
-                            ifstream original;
-                            ifstream received;
-
-                            original.open(original_name);
-                            received.open(newfile);
-
-                            std::filesystem::path p_original{original_name};
-                            std::filesystem::path p_received{newfile};
-
-                            if (!received.fail()) {
-                                long int original_size = std::filesystem::file_size(p_original);
-                                long int received_size = std::filesystem::file_size(p_received);
-                                long int diff = original_size - received_size;
-                                int percentage = 100 * received_size / original_size;
-                                cout << "Um total de " << diff << " bytes não chegaram, sendo que cerca de " << percentage << "\% dos bytes foram transmitidos" << endl;
-                            }
-
-                            original.close();
-                            received.close();
-                        }
-                    }
-
                     recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i);
                 }
                 auto list_stop = high_resolution_clock::now();
@@ -276,6 +261,74 @@ int main(int argc, char *argv[]){
                 
                 cout << "Todos os arquivos foram recebidos com sucesso!" << endl;
                 cout << "Tempo de transmissão de todos os arquivos: " << list_duration.count() << " ms" << endl;
+
+                if (argc == 4) {
+                    if (strcmp(argv[3], "-c") == 0) {
+                        cout << endl << endl;
+                        usleep(300000);
+                        const char *command = "find server_arqs -type f -printf \"%f\n\" > temp";
+                        system(command);
+
+                        ifstream files("temp");
+                        string filename;
+
+                        while (getline(files, filename)) {
+                            cout << "No arquivo " << filename << ":" << endl;
+                            char original_name[MAX_ARQ_NAME+1];
+                            char received_name[MAX_ARQ_NAME+1];
+
+                            memset(original_name, 0 , MAX_ARQ_NAME + 1);
+                            strcpy(original_name, "server_arqs/");
+                            strcat(original_name, filename.c_str());
+
+                            memset(received_name, 0 , MAX_ARQ_NAME + 1);
+                            strcpy(received_name, "client_arqs/");
+                            strcat(received_name, filename.c_str());
+
+                            ifstream original;
+                            ifstream received;
+
+                            original.open(original_name);
+                            received.open(received_name);
+
+                            std::filesystem::path p_original{original_name};
+                            std::filesystem::path p_received{received_name};
+
+                            if (!received.fail()) {
+                                long int original_size = std::filesystem::file_size(p_original);
+                                long int received_size = std::filesystem::file_size(p_received);
+                                long int diff = original_size - received_size;
+                                int percentage = 100 * received_size / original_size;
+
+                                char c1[2], c2[2];
+                                int diff_bytes = 0;
+
+                                cout << "Um total de " << diff << " bytes não chegaram, sendo que cerca de " << percentage << "\% dos bytes foram transmitidos" << endl;
+
+                                while (!original.eof() && !received.eof()) {
+                                    original.read(c1, 1);
+                                    received.read(c2, 1);
+                                    // cout << "c1 = " << c1[0] << " c2 = " << c2[0] << endl;
+                                    if (c1[0] != c2[0]) {
+                                        diff_bytes++;
+                                    }
+                                }
+
+                                int percentage_diff = 100 * diff_bytes / received_size;
+
+                                cout << "Um total de " << diff_bytes << " bytes chegaram errado, sendo que cerca de "
+                                    << percentage_diff << "\% dos bytes chegaram com algum problema(Ex. Ordem errada, valor incorreto, etc.)"
+                                    << endl;
+                                cout << endl;
+                            }
+
+                            original.close();
+                            received.close();
+                            usleep(300000);
+                        }
+                        system("rm -f temp");
+                    }
+                }
 
                 }
                 break;
