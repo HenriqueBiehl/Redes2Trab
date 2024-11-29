@@ -10,123 +10,11 @@
 #include <chrono>
 #include <filesystem>
 
+#include "lib_network.hpp"
+
 using namespace std;
 using namespace std::chrono;
-
-#define END_TRANSMISSION 0
-#define LIST_FILE 1
-#define DOWNLOAD_FILE 2
-#define DOWNLOAD_ALL_FILES 3
-#define ACK 4
-#define NACK 5
-#define ERROR 6
-
-
-#define PACK_ROOF 100
-
-#define BUFF_SIZE 2048
-#define MAX_ARQ_NAME 1024
-
-#define END_OF_FILE "EOF"
-
-
-struct network_packet{
-    unsigned short op; 
-    unsigned short more;
-    unsigned int bytes;
-    char buf[BUFF_SIZE + 1];
-};
-
-
-short chose_option(){
-    short opt; 
-
-    cout << "Choose your option:" << endl;
-    cout << "[0] - Exit" << endl; 
-    cout << "[1] - List of Files" << endl; 
-    cout << "[2] - Download one File" << endl; 
-    cout << "[3] - Dowload all Files" << endl;
-
-    cin >> opt; 
-    while(opt < 0 && opt > 2){
-        cout << "Choose between 0 and 2" << endl; 
-        cin >> opt; 
-    }
-
-    return opt;
-}
-
-int receive_file_list(int socket){
-    struct network_packet packet;
-    int ack_count;
-    int packet_count = 0;
-
-    while(recv(socket, &packet, sizeof(struct network_packet) , 0) >= 0){
-
-        if(packet.op == ERROR){
-            cout << packet.buf;
-            return -1;
-        }
-
-        cout << packet.buf;
-        memset(&packet, 0, sizeof(struct network_packet));
-        ack_count++;
-        packet_count++;
-
-        if(packet.more == 0)
-            break;
-
-        if(ack_count == PACK_ROOF){
-            ack_count  = 0; 
-            packet.op = ACK;
-            send(socket, &packet, sizeof(struct network_packet), 0);
-        }
-    }
-
-    return packet_count;
-}
-
-int receive_file(int socket, char *destination, int total_bytes){
-    struct network_packet packet;
-    short ack_count = 0;
-    int packet_count = 0;
-
-    ofstream file(destination);
-    
-    if(!file.is_open()){
-        cout << "FALHA AO ABRIR ARQUIVO!" << endl;
-        return -1; 
-    }             
-
-    while(total_bytes > 0 ){
-        
-        if(recv(socket, &packet, sizeof(struct network_packet) , 0) < 0){
-            cout << "Erro ao receber pacote! " << endl; 
-            exit(1);
-        }        
-        
-        packet_count++;
-        ack_count++;
-
-        file.write(packet.buf, packet.bytes);
-
-        total_bytes -= packet.bytes; 
-        
-        if(ack_count == PACK_ROOF){
-            ack_count  = 0; 
-            packet.op = ACK;
-            send(socket, &packet, sizeof(struct network_packet), 0);
-        }
-        
-        memset(&packet, 0, sizeof(struct network_packet));
-    }
-
-    file.close();
-
-    return packet_count;
-}
-
-
+ 
 int main(int argc, char *argv[]){
     int sock_desc;
     struct sockaddr_in sa;
@@ -219,7 +107,7 @@ int main(int argc, char *argv[]){
                         cout << packet.buf; 
                         break;
                     }
-                    
+
                     memset(destination, 0 , MAX_ARQ_NAME + 1);
                     strcpy(destination, "received/");
                     strcat(destination, file_name);
@@ -237,7 +125,8 @@ int main(int argc, char *argv[]){
                         cout << "Transmissão Concluida! Arquivo " << file_name << endl;
                         cout << "Salvo em: " << destination << endl;
                         cout << packet_count << " pacotes recebidos!" << endl;
-                        cout << "Tempo de transmissão: " << duration.count() << " microssegundos" << endl;
+                        cout.precision(6);
+                        cout << "Tempo de transmissão: " << duration.count()/1e6 << " segundos" << endl;
                         cout.precision(3);
                         cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl; 
                         
@@ -296,7 +185,8 @@ int main(int argc, char *argv[]){
                             cout << "Transmissão Concluida! Arquivo " << file_name << endl;
                             cout << "Salvo em: " << destination << endl;
                             cout << packet_count << " packets received" << endl;
-                            cout << "Tempo de transmissão: " << duration.count() << " microssegundos" << endl;
+                            cout.precision(6);
+                            cout << "Tempo de transmissão: " << duration.count()/1e6 << " segundos" << endl;
                             cout.precision(3);
                             cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl; 
 
@@ -326,7 +216,8 @@ int main(int argc, char *argv[]){
                     auto list_throughput = bytes_received / list_duration.count();
                     
                     cout << "Todos os arquivos foram recebidos com sucesso!" << endl;
-                    cout << "Tempo de transmissão de todos os arquivos: " << list_duration.count() << " microssegundos" << endl;
+                    cout.precision(6);
+                    cout << "Tempo de transmissão de todos os arquivos: " << list_duration.count()/1e6 << " segundos" << endl;
                     cout.precision(3);
                     cout << "Taxa de Transmissão: " << list_throughput << " MB/s" << endl; 
                     

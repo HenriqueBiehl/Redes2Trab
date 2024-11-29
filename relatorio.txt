@@ -1,0 +1,89 @@
+
+** Relatorio **
+
+Henrique de Oliveira Biehl - GRR20221257
+André Gauer Thomal - GRR 
+
+** Introdução **
+Este relatório tem como propósito de descrever a implementação em C++ uma rede de cliente-servidor focada na transmissão de arquivos, 
+utilizando dos protocolos TCP e UDP e comparando o desempenho de  cada implementação. 
+
+** Estrutura do Código **
+
+Para implementação de ambas as redes foi desenvolvido um header para transmissão de dados e controle de fluxo. O header é dividido nos campos: 
+
+op - para indicar operações sendo executadas
+more - utilizado para indicar se há mais pacotes ou arquivos sendo transmitidos
+bytes - indica bytes transmitidos no buffer de dados ou tamanho de um arquivo descrito no buffer de dados
+buf - buffer onde são transmitidos dados, incluindo nome de arquivos, erros e dados. tamanho utilizado é de 2049 bytes.  
+
+Tanto para TCP quanto UDP, há operações em comum para execução: 
+
+LIST_FILE indica pedido para transmissão de arquivos. Para cada arquivo é transmitido nome e tamanho no buffer dados e a flag more é ativada com 1. Ao encerrar o envio dos arquivos, 
+o campo more é enviado com 1. 
+
+DOWNLOAD_FILE é para transmitir um unico arquivo da pastas arqs . O cliente passa o nome para o servidor que retorna o numero de bytes do arquivo. O cliente então recebe os pacotes e armazena em uma copia
+na pasta received. 
+
+DOWNLOAD_ALL_FILES é para transmitir todos os arquivos da pasta arqs. O cliente envia o pedido ao servidor que retorna ao cliente o nome do arquivo e seu tamanho. O servidor então envia os dados do arquivo
+e, ao encerrar, envia os dados do próximo arquivo até encerrar a lista. 
+
+O funcionamento do cliente consiste em um loop onde podem ser escolhida 4 opções de operação: 
+
+    0 - para sair
+    1 - para listar arquivos
+    2 - Baixar 1 arquivo
+    3 - Baixar todos os arquivos
+
+O cliente escolhe essas operações que são envidas em um pacote para o servidor. O servidor então processa a operação e age de acordo. 
+
+** Especificações do TCP **
+Na implementação do programa no protocolo TCP as operações diferentes são: 
+
+END_TRANSMISSION - utilizada para informar ao servidor que o cliente deseja se desconectar, para que o servidor possa liberar o socket para o proximo da fila. 
+
+ACK - Em função da velocidade do C++, ocorre uma desincronização entre o cliente e o servidor ao enviar pacotes. Para isso, a operação ACK serve para o cliente informar ao servidor
+após o envio de um número pré-determinado de pacotes (100 nos testes realizados nesse relatório), infomrar ao servidor que os pacotes foram recebidos. O servidor aguarda o ACK para continuar a transmissão. 
+Ademais, o ACK é utilizado em DOWNLOAD_ALL_FILES, para indicar que o arquivo enviado pelo servidor foi recebido e ele pode enviar o próximo.
+
+NACK - Caso o cliente, em DOWNLOAD_ALL_FILES, não consiga receber o arquivo, ele envia um NACK para o servidor indicando erro. Os 2 lados então encerram a operação de baixar todos os arquivos. 
+
+ERROR - Utilizado para informar erros de arquivos inexistentes (no caso de uma requisição de DOWNLOAD_FILE do cliente) e ao abrir e/ou transmitir a lista de arquivos por parte do servidor. 
+
+
+Os protocolos para cada operação funcionam da seguinte forma: 
+
+OP 0 - Sair 
+    - Cliente envia para o servidor o pedido para encerrar a conexão com END_TRANSMISSION e, então, se desconecta. 
+    O servidor então processa o pedido, e libera o socket associado ao cliente, permitindo a conexão de uma nova máquina. 
+
+OP 1 - LIST_FILE
+    - O cliente envia para o servidor um pedido para listar os arquivos com a operação LIST_FILE. 
+    - O servidor então envia ao cliente os nomes e tamanhos dos arquivos no buffer buf utilizado a flag LIST_FILE e campo more = 1 para indicar que há mais arquivos. 
+    - Ao receber um pacote, o cliente imprime os dados do buffer. 
+    - Ao enviar toda a lista, o servidor envia uma mensagem com campo more = 0 para indicar que não há mais arquivos na lista.
+
+OP 2 - DOWNLOAD_FILE
+    - O cliente envia ao servidor um pedido para baixar o arquivo descrito no campo buf. 
+    - O servidor retorna o tamanho do arquivo em bytes no campo bytes. Caso o arquivo nao exista, o servidor envia a operação ERRO com a descrição do erro no buf. 
+    - O servidor então envia os pacotes de dados para o cliente. A cada 100 bytes, ele espera por uma confirmação de recebimento do cliente por meio do ack. 
+    - O cliente se orienta pelo numero de bytes enviados previamente pelo servidor para receber os pacotes. Quando a quantidade de bytes recebidos é a mesma do que foi
+    informado pelo servidor, a operação encerra. O arquivo é salvo na pasta received, com mesmo nome. 
+
+OP 3 - DOWNLOAD_ALL_FILES
+    - O cliente envia um pedido para enviar todos os arquivos com a operação DOWNLOAD_ALL_FILES. 
+    - Então é executado o seguinte laço:
+        - O servidor envia o nome do arquivo e seu tamanho para o cliente. 
+        - O cliente então recebe os dados do arquivo, se orientando pelo numero de bytes informado pelo servidor para encerrar o recebimento do arquivo (tal qual o DOWNLOAD_FILE). 
+            - De forma analoga, são enviados ACKs de recebimento de pacotes a cada 100 pacotes recebidos do servidor.
+        - Ao receber um arquivo o cliente envia para o servidor um ACK indicando que recebeu o arquivo e esta pronto para receber o próximo arquivo. 
+    - Ao finalizar o envio de todos os arquivos, o servidor envia uma mensagem com o campo more=0 indicando que finalizou toda a lista. 
+
+No programa, ao enviar um arquivo (por DOWNLOAD_ALL_FILES ou DOWNLOAD_ALL_FILES) é informado tanto para o cliente quanto servidor, 
+o tempo decorrido em segundos, pacotes recebidos/enviados e a taxa de transmissão. 
+
+Na operação de DOWNLOAD_ALL_FILES é informado também o tempo decorrido para o envio de todos os arquivos, taxa de transmissão total (MB/s) e tempo decorrido em segundos.
+
+** Especificações UDP ** 
+
+No UDP a operação exclusiva é NEXT_FILE, que serve para indicar ao cliente que há um proximo arquivo a ser enviado na operação DOWNLOAD_ALL_FILES. 

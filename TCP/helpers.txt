@@ -6,17 +6,5 @@ g++ client.cpp -o client -std=c++17 -g -Wall
 
 ./client localhost 5000 "teste"
 
-                    unsigned int file_size = filesystem::file_size(arq_name);
-                    unsigned int checkpoint_size = file_size / 20;
-                    unsigned int checkpoint = checkpoint_size;
-                    unsigned int bytes_sent = 0;
-                    float percent = 0.0;
-
-                      /*bytes_sent += bytes_read;
-                        percent = bytes_sent/file_size;
-                        
-
-                        if(bytes_sent >= checkpoint){
-                            cout << bytes_sent << " bytes enviados // " << percent << " % completo" << endl; 
-                            checkpoint += checkpoint_size;
-                        }*/
+if(!filesystem::exists("received"))
+    system("mkdir received");

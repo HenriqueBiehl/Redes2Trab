@@ -9,88 +9,13 @@
 #include <chrono>
 #include <filesystem>
 
+#include "lib_network.hpp"
+
 #define TAM_LINE 5
 #define MAX_HOST_NAME 30
 
-
-#define END_TRANSMISSION 0
-#define LIST_FILE 1
-#define DOWNLOAD_FILE 2
-#define DOWNLOAD_ALL_FILES 3
-#define ACK 4
-#define NACK 5
-#define ERROR 6
-
-#define PACK_ROOF 100
-
-#define BUFF_SIZE 2048
-#define MAX_ARQ_NAME 1024
-
-#define END_OF_FILE "EOF"
-
-
-struct network_packet{
-    unsigned short op; 
-    unsigned short more;
-    unsigned int bytes; 
-    char buf[BUFF_SIZE + 1];
-};
-
 using namespace std;
 using namespace std::chrono;
-
-int send_file(int socket, char *file_name, short op_flag){
-    struct network_packet packet;
-    int packet_count = 0;
-    short ack_count = 0;
-
-    ifstream file(file_name); 
-
-    if(!file.is_open()){
-        cout << "Erro ao abrir arquivo" << endl;
-        return -1;
-    }
-    
-    memset(&packet, 0, sizeof(struct network_packet)); 
-    streamsize bytes_read; 
-    
-    while(!file.eof()){
-        file.read(packet.buf, BUFF_SIZE);
-        bytes_read = file.gcount(); 
-        packet.op = op_flag; 
-        packet.bytes = bytes_read;
-
-        if(file.eof() && op_flag != DOWNLOAD_ALL_FILES)
-            packet.op = 0; 
-        else 
-            packet.op = 1;
-
-        send(socket, &packet, sizeof(struct network_packet), 0);
-
-        memset(&packet, 0, sizeof(struct network_packet)); 
-        packet_count++;
-        ack_count++;
-
-        if(ack_count == PACK_ROOF){
-            cout << "100 pacotes enviados, aguardando ACK..." << endl;
-            ack_count = 0;
-            
-            if(recv(socket, &packet, sizeof(struct network_packet) , 0) < 0){
-                cout << "Erro ao receber pacote! " << endl; 
-                exit(1);
-            }                   
-            
-            if(packet.op == ACK)
-                cout << "ACK Recebido!" << endl;
-            else 
-                return -1;
-        }
-    }
-
-    file.close();
-
-    return packet_count;
-}
 
 
 int main(int argc, char *argv[]){
@@ -190,7 +115,6 @@ int main(int argc, char *argv[]){
 
                 case(DOWNLOAD_FILE):
                     {
-
                         char arq_name[MAX_ARQ_NAME + 1];
                         memset(arq_name, 0 , MAX_ARQ_NAME + 1);
                         strcpy(arq_name, "arqs/");
@@ -221,10 +145,12 @@ int main(int argc, char *argv[]){
                             auto stop = high_resolution_clock::now();
                             auto duration = duration_cast<microseconds>(stop-start);
                             double throughput = file_size/ duration.count();
-                            
+                            cout << endl << "** Relatório de Transmissão **" << endl;
+
+                            cout << "Arquivo " << arq_name << " enviado com sucesso!" << endl;
                             cout << "Arquivo enviado com sucesso!" << endl;
-                            cout << "Arquivo enviado com sucesso!" << endl;
-                            cout << "Tempo de transmissão: " << duration.count() << " ms" << endl;
+                            cout.precision(6);
+                            cout << "Tempo de transmissão: " << duration.count()/1e6 << " segundos" << endl;                            
                             cout << packet_count << " pacotes enviados " << endl;
                             cout.precision(3);
                             cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl; 
@@ -234,13 +160,13 @@ int main(int argc, char *argv[]){
                             cout << "Falha ao transmitir o arquivo: " << arq_name << endl;
                         }
 
-                        cout << endl << "**************************" << endl;
+                        cout << endl << "******************************" << endl;
                     }
                     break;
                 case (DOWNLOAD_ALL_FILES):
                     {
                         const char *command = "find arqs -type f -printf \"%f\n\" > temp";
-                
+                        
                         system(command);
 
                         ifstream list_files("temp"); 
@@ -255,9 +181,12 @@ int main(int argc, char *argv[]){
 
                         string file_name;
                         double bytes_transmitted = 0;
+                        bool success;
+
                         auto list_start =  high_resolution_clock::now();
                         while(getline(list_files, file_name)){
-                            
+                            success = false;
+
                             cout << "Enviando: " << file_name << endl;
 
                             char arq_name[MAX_ARQ_NAME + 1];
@@ -289,7 +218,8 @@ int main(int argc, char *argv[]){
                                 auto duration = duration_cast<microseconds>(stop-start);
                                 double throughput = (double) file_size/ duration.count(); 
                                 
-                                cout << endl << "--------------------------" << endl;
+                                cout << endl << "-- Relatório de Transmissão --" << endl;
+
                                 cout << "Arquivo enviado com sucesso!" << endl;
                                 cout << "Tempo de transmissão: " << duration.count() << " microssegundos" << endl;
                                 cout << packet_count << " pacotes enviados " << endl;
@@ -297,14 +227,15 @@ int main(int argc, char *argv[]){
                                 cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl; 
 
                                 bytes_transmitted += file_size;
+                                success = true;
                             }
                             else{
-                                cout << "Falha ao transmitir o arquivo: " << arq_name << endl;
+                                cout << "ERRO: Falha ao transmitir o arquivo: " << arq_name << endl;
                             }
  
                             //Espera receber Ack para o proximo arquivo do cliente
                             if(recv(sock_answer, &packet, sizeof(struct network_packet) , 0) < 0){
-                                cout << "Erro ao receber pacote! " << endl; 
+                                cout << "ERRO ao receber pacote! " << endl; 
                                 exit(1);
                             }                                 
                             
@@ -312,23 +243,33 @@ int main(int argc, char *argv[]){
                                 cout << "ACK Recebido: " << file_name << " foi recebido pelo cliente!" << endl;
                             else {
                                 cout << "NACK Recebido: Encerrando trasmissão!" << endl; 
+                                success = false;
                                 break;
                             }
-                            cout << endl << "--------------------------" << endl;
+                            cout << endl << "------------------------------" << endl;
                         }
 
                         packet.more = 0; 
                         send(sock_answer, &packet, sizeof(struct network_packet), 0);
 
-                        auto list_stop = high_resolution_clock::now();
-                        auto list_duration = duration_cast<microseconds>(list_stop-list_start);
-                        auto throughput_list = bytes_transmitted/list_duration.count();
+                        if(success){
+                            auto list_stop = high_resolution_clock::now();
+                            auto list_duration = duration_cast<microseconds>(list_stop-list_start);
+                            auto throughput_list = bytes_transmitted/list_duration.count();
 
-                        cout << "Todos os arquivos foram enviados com sucesso!" << endl;
-                        cout << "Tempo de transmissão de toda a lista: " << list_duration.count() << " microssegundos" << endl;
-                        cout.precision(3);
-                        cout << "Taxa de Transmissão de " << bytes_transmitted << " :" << throughput_list << " MB/s" << endl; 
-                        cout << endl << "--------------------------" << endl;
+                            cout << endl << "-- Relatório de Transmissão Final --" << endl;
+
+                            cout << "Todos os arquivos foram enviados com sucesso!" << endl;
+                            cout.precision(6);
+                            cout << "Tempo de transmissão: " << list_duration.count()/1e6 << " segundos" << endl;                            
+                            cout.precision(4);
+                            cout << "Taxa de Transmissão de " << bytes_transmitted << " bytes: " << throughput_list << " MB/s" << endl; 
+                        }
+                        else{
+                            cout << "ERRO: Falha em transmitir todos os arquivos!" << endl;
+                        }
+
+                        cout << endl << "------------------------------------" << endl;
                         list_files.close();
                         system("rm -f temp");
 
