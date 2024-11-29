@@ -1,0 +1,189 @@
+[0] - Exit
+[1] - List of Files
+[2] - Download one File
+[3] - Dowload all Files
+1
+Enviando pedido de Lista
+*** Listando arquivos ****
+
+Patriota_Caminhao.avi 14036412 bytes
+Jesse_Pinkman.mp4 498606 bytes
+Tears_In_The_Rain.mp4 3728275 bytes
+thats_life.txt 1280 bytes
+Dennis_Bergkamp_1998.avi 9441068 bytes
+Comfortably_Numb(Pulse)_Pink_Floyd.mp4 24976804 bytes
+Bing_chilling.avi 1626156 bytes
+h8.pdf 2919591 bytes
+Black_Mud_The_Black_Keys.mp4 4284516 bytes
+Receba_Inteligencia.avi 1550096 bytes
+Tedio_Biquini_Cavadao.mp4 3722260 bytes
+death.mp4 43190 bytes
+
+**************************
+Choose your option:
+[0] - Exit
+[1] - List of Files
+[2] - Download one File
+[3] - Dowload all Files
+2
+
+--------------------------
+Digite nome do arquivo:
+Jesse_Pinkman.mp4
+Total Bytes: 498606
+Transmissão Concluida! Arquivo Jesse_Pinkman.mp4
+Salvo em: received/Jesse_Pinkman.mp4
+50 pacotes recebidos!
+Tempo de transmissão: 0.007025 segundos
+Taxa de Transmissão: 14 MB/s
+No arquivo Jesse_Pinkman.mp4:
+Tamanho do arquivo original: 498606
+Tamanho do arquivo recebido: 101294
+Um total de 397312 bytes não chegaram, sendo que cerca de 20% dos bytes foram transmitidos
+Um total de 938 bytes chegaram errado, sendo que cerca de 0% dos bytes chegaram com algum problema(Ex. Ordem errada, valor incorreto, etc.)
+
+
+--------------------------
+Choose your option:
+[0] - Exit
+[1] - List of Files
+[2] - Download one File
+[3] - Dowload all Files
+3
+Baixando: Patriota_Caminhao.avi
+Tamanho: 14036412
+Transmissão Concluida! Arquivo Patriota_Caminhao.avi
+Salvo em: received/Patriota_Caminhao.avi
+6039 packets received
+Tempo de transmissão: 0.176289 segundos
+Taxa de Transmissão: 70 MB/s
+
+--------------------------
+Baixando: Jesse_Pinkman.mp4
+Tamanho: 498606
+Transmissão Concluida! Arquivo Jesse_Pinkman.mp4
+Salvo em: received/Jesse_Pinkman.mp4
+48 packets received
+Tempo de transmissão: 0.004325 segundos
+Taxa de Transmissão: 22 MB/s
+
+--------------------------
+Baixando: Dennis_Bergkamp_1998.avi
+Tamanho: 9441068
+Transmissão Concluida! Arquivo Dennis_Bergkamp_1998.avi
+Salvo em: received/Dennis_Bergkamp_1998.avi
+3430 packets received
+Tempo de transmissão: 0.105098 segundos
+Taxa de Transmissão: 66 MB/s
+
+--------------------------
+Baixando: Comfortably_Numb(Pulse)_Pink_Floyd.mp4
+Tamanho: 24976804
+Transmissão Concluida! Arquivo Comfortably_Numb(Pulse)_Pink_Floyd.mp4
+Salvo em: received/Comfortably_Numb(Pulse)_Pink_Floyd.mp4
+6955 packets received
+Tempo de transmissão: 0.18703 segundos
+Taxa de Transmissão: 76 MB/s
+
+--------------------------
+Baixando: Bing_chilling.avi
+Tamanho: 1626156
+Transmissão Concluida! Arquivo Bing_chilling.avi
+Salvo em: received/Bing_chilling.avi
+49 packets received
+Tempo de transmissão: 0.004196 segundos
+Taxa de Transmissão: 23 MB/s
+
+--------------------------
+Baixando: Black_Mud_The_Black_Keys.mp4
+Tamanho: 4284516
+Transmissão Concluida! Arquivo Black_Mud_The_Black_Keys.mp4
+Salvo em: received/Black_Mud_The_Black_Keys.mp4
+1374 packets received
+Tempo de transmissão: 0.060492 segundos
+Taxa de Transmissão: 46 MB/s
+
+--------------------------
+Baixando: Receba_Inteligencia.avi
+Tamanho: 1550096
+Transmissão Concluida! Arquivo Receba_Inteligencia.avi
+Salvo em: received/Receba_Inteligencia.avi
+48 packets received
+Tempo de transmissão: 0.007057 segundos
+Taxa de Transmissão: 13 MB/s
+
+--------------------------
+Baixando: death.mp4
+Tamanho: 43190
+Transmissão Concluida! Arquivo death.mp4
+Salvo em: received/death.mp4
+23 packets received
+Tempo de transmissão: 0.006488 segundos
+Taxa de Transmissão: 6 MB/s
+
+--------------------------
+Todos os arquivos foram recebidos com sucesso!
+Tempo de transmissão de todos os arquivos: 0.560008 segundos
+Taxa de Transmissão: 65 MB/s
+
+
+-- Erros de Transmissão --
+No arquivo Patriota_Caminhao.avi:
+Tamanho do arquivo original: 14036412
+Tamanho do arquivo recebido: 12365244
+Um total de 1671168 bytes não chegaram, sendo que cerca de 88% dos bytes foram transmitidos
+Um total de 12215676 bytes chegaram errado, sendo que cerca de 98% dos bytes chegaram com algum problema(Ex. Ordem errada, valor incorreto, etc.)
+
+No arquivo Jesse_Pinkman.mp4:
+Tamanho do arquivo original: 498606
+Tamanho do arquivo recebido: 96256
+Um total de 402350 bytes não chegaram, sendo que cerca de 19% dos bytes foram transmitidos
+Um total de 1 bytes chegaram errado, sendo que cerca de 0% dos bytes chegaram com algum problema(Ex. Ordem errada, valor incorreto, etc.)
+
+No arquivo Tears_In_The_Rain.mp4:
+No arquivo thats_life.txt:
+No arquivo Dennis_Bergkamp_1998.avi:
+Tamanho do arquivo original: 9441068
+Tamanho do arquivo recebido: 7022380
+Um total de 2418688 bytes não chegaram, sendo que cerca de 74% dos bytes foram transmitidos
+Um total de 6897099 bytes chegaram errado, sendo que cerca de 98% dos bytes chegaram com algum problema(Ex. Ordem errada, valor incorreto, etc.)
+
+No arquivo Comfortably_Numb(Pulse)_Pink_Floyd.mp4:
+Tamanho do arquivo original: 24976804
+Tamanho do arquivo recebido: 14241188
+Um total de 10735616 bytes não chegaram, sendo que cerca de 57% dos bytes foram transmitidos
+Um total de 14087982 bytes chegaram errado, sendo que cerca de 98% dos bytes chegaram com algum problema(Ex. Ordem errada, valor incorreto, etc.)
+
+No arquivo Bing_chilling.avi:
+Tamanho do arquivo original: 1626156
+Tamanho do arquivo recebido: 98304
+Um total de 1527852 bytes não chegaram, sendo que cerca de 6% dos bytes foram transmitidos
+Um total de 1 bytes chegaram errado, sendo que cerca de 0% dos bytes chegaram com algum problema(Ex. Ordem errada, valor incorreto, etc.)
+
+No arquivo h8.pdf:
+No arquivo Black_Mud_The_Black_Keys.mp4:
+Tamanho do arquivo original: 4284516
+Tamanho do arquivo recebido: 2809956
+Um total de 1474560 bytes não chegaram, sendo que cerca de 65% dos bytes foram transmitidos
+Um total de 2722790 bytes chegaram errado, sendo que cerca de 96% dos bytes chegaram com algum problema(Ex. Ordem errada, valor incorreto, etc.)
+
+No arquivo Receba_Inteligencia.avi:
+Tamanho do arquivo original: 1550096
+Tamanho do arquivo recebido: 96256
+Um total de 1453840 bytes não chegaram, sendo que cerca de 6% dos bytes foram transmitidos
+Um total de 1 bytes chegaram errado, sendo que cerca de 0% dos bytes chegaram com algum problema(Ex. Ordem errada, valor incorreto, etc.)
+
+No arquivo Tedio_Biquini_Cavadao.mp4:
+No arquivo death.mp4:
+Tamanho do arquivo original: 43190
+Tamanho do arquivo recebido: 43190
+Um total de 0 bytes não chegaram, sendo que cerca de 100% dos bytes foram transmitidos
+Um total de 0 bytes chegaram errado, sendo que cerca de 0% dos bytes chegaram com algum problema(Ex. Ordem errada, valor incorreto, etc.)
+
+
+**************************
+Choose your option:
+[0] - Exit
+[1] - List of Files
+[2] - Download one File
+[3] - Dowload all Files

@@ -1,0 +1,121 @@
+Recebi pedido de Lista
+
+Lista enviada com sucesso!
+Tempo de transmissão de toda a lista: 3012 microssegundos
+1 pacotes enviados 
+Taxa de Transmissão: 0.139 MB/s
+Enviando...
+
+** Relatório de Transmissão **
+Arquivo arqs/Jesse_Pinkman.mp4 enviado com sucesso!
+Arquivo enviado com sucesso!
+Tempo de transmissão: 0.002629 segundos
+244 pacotes enviados 
+Taxa de Transmissão: 189 MB/s
+
+
+******************************
+Enviando: Patriota_Caminhao.avi
+Enviando...
+
+-- Relatório de Transmissão --
+Arquivo enviado com sucesso!
+Tempo de transmissão: 24506 microssegundos
+6854 pacotes enviados 
+Taxa de Transmissão: 573 MB/s
+Enviando: Jesse_Pinkman.mp4
+Enviando...
+
+-- Relatório de Transmissão --
+Arquivo enviado com sucesso!
+Tempo de transmissão: 886 microssegundos
+244 pacotes enviados 
+Taxa de Transmissão: 563 MB/s
+Enviando: Tears_In_The_Rain.mp4
+Enviando...
+
+-- Relatório de Transmissão --
+Arquivo enviado com sucesso!
+Tempo de transmissão: 128134 microssegundos
+1821 pacotes enviados 
+Taxa de Transmissão: 29.1 MB/s
+Enviando: thats_life.txt
+Enviando...
+
+-- Relatório de Transmissão --
+Arquivo enviado com sucesso!
+Tempo de transmissão: 1392 microssegundos
+1 pacotes enviados 
+Taxa de Transmissão: 0.92 MB/s
+Enviando: Dennis_Bergkamp_1998.avi
+Enviando...
+
+-- Relatório de Transmissão --
+Arquivo enviado com sucesso!
+Tempo de transmissão: 61413 microssegundos
+4610 pacotes enviados 
+Taxa de Transmissão: 154 MB/s
+Enviando: Comfortably_Numb(Pulse)_Pink_Floyd.mp4
+Enviando...
+
+-- Relatório de Transmissão --
+Arquivo enviado com sucesso!
+Tempo de transmissão: 70021 microssegundos
+12196 pacotes enviados 
+Taxa de Transmissão: 357 MB/s
+Enviando: Bing_chilling.avi
+Enviando...
+
+-- Relatório de Transmissão --
+Arquivo enviado com sucesso!
+Tempo de transmissão: 130499 microssegundos
+795 pacotes enviados 
+Taxa de Transmissão: 12.5 MB/s
+Enviando: h8.pdf
+Enviando...
+
+-- Relatório de Transmissão --
+Arquivo enviado com sucesso!
+Tempo de transmissão: 12277 microssegundos
+1426 pacotes enviados 
+Taxa de Transmissão: 238 MB/s
+Enviando: Black_Mud_The_Black_Keys.mp4
+Enviando...
+
+-- Relatório de Transmissão --
+Arquivo enviado com sucesso!
+Tempo de transmissão: 15493 microssegundos
+2093 pacotes enviados 
+Taxa de Transmissão: 277 MB/s
+Enviando: Receba_Inteligencia.avi
+Enviando...
+
+-- Relatório de Transmissão --
+Arquivo enviado com sucesso!
+Tempo de transmissão: 9427 microssegundos
+757 pacotes enviados 
+Taxa de Transmissão: 164 MB/s
+Enviando: Tedio_Biquini_Cavadao.mp4
+Enviando...
+
+-- Relatório de Transmissão --
+Arquivo enviado com sucesso!
+Tempo de transmissão: 26340 microssegundos
+1818 pacotes enviados 
+Taxa de Transmissão: 141 MB/s
+Enviando: death.mp4
+Enviando...
+
+-- Relatório de Transmissão --
+Arquivo enviado com sucesso!
+Tempo de transmissão: 2514 microssegundos
+22 pacotes enviados 
+Taxa de Transmissão: 17.2 MB/s
+
+-- Relatório de Transmissão Final --
+Todos os arquivos foram enviados com sucesso!
+Tempo de transmissão: 0.557641 segundos
+Taxa de Transmissão de 6.683e+07 bytes: 119.8 MB/s
+
+------------------------------------
+
