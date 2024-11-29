@@ -96,7 +96,8 @@ int main(int argc, char *argv[]){
                         
                             cout << endl;
                             cout << "Lista enviada com sucesso!" << endl;
-                            cout << "Tempo de transmissão de toda a lista: " << duration.count() << " microssegundos" << endl;
+                            cout.precision(6);
+                            cout << "Tempo de transmissão: " << duration.count()/1e6 << " segundos" << endl;                            
                             cout << packet_count << " pacotes enviados " << endl;
                             cout.precision(3);
                             cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl; 
@@ -221,7 +222,8 @@ int main(int argc, char *argv[]){
                                 cout << endl << "-- Relatório de Transmissão --" << endl;
 
                                 cout << "Arquivo enviado com sucesso!" << endl;
-                                cout << "Tempo de transmissão: " << duration.count() << " microssegundos" << endl;
+                                cout.precision(6);
+                                cout << "Tempo de transmissão: " << duration.count()/1e6 << " segundos" << endl;                                
                                 cout << packet_count << " pacotes enviados " << endl;
                                 cout.precision(3);
                                 cout << "Taxa de Transmissão: " << throughput << " MB/s" << endl; 

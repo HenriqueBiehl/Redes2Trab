@@ -108,6 +108,9 @@ int main(int argc, char *argv[]){
                         break;
                     }
 
+                    if(!filesystem::exists("received"))
+                        system("mkdir received");
+
                     memset(destination, 0 , MAX_ARQ_NAME + 1);
                     strcpy(destination, "received/");
                     strcat(destination, file_name);
@@ -156,6 +159,9 @@ int main(int argc, char *argv[]){
                         cout << packet.buf; 
                         break;
                     }
+
+                    if(!filesystem::exists("received"))
+                        system("mkdir received");
 
                     unsigned int bytes_received = 0;
                     auto list_start = high_resolution_clock::now();

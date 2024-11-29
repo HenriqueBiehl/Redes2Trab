@@ -1,0 +1,207 @@
+Choose your option:
+[0] - Exit
+[1] - List of Files
+[2] - Download one File
+[3] - Dowload all Files
+1
+Enviando pedido de Lista
+
+*** Listando arquivos ****
+
+Patriota_Caminhao.avi - 14036412 bytes
+Tedio_Biquini_Cavadao.mp4 - 3722260 bytes
+Receba_Inteligencia.avi - 1550096 bytes
+Tears_In_The_Rain.mp4 - 3728275 bytes
+death.mp4 - 43190 bytes
+Dennis_Bergkamp_1998.avi - 9441068 bytes
+thats_life.txt - 1280 bytes
+Bing_chilling.avi - 1626156 bytes
+Black_Mud_The_Black_Keys.mp4 - 4284516 bytes
+Comfortably_Numb(Pulse)_Pink_Floyd.mp4 - 24976804 bytes
+h8.pdf - 2919591 bytes
+Jesse_Pinkman.mp4 - 498606 bytes
+
+**************************
+
+Choose your option:
+[0] - Exit
+[1] - List of Files
+[2] - Download one File
+[3] - Dowload all Files
+2
+
+--------------------------
+Digite nome do arquivo:
+Patriota_Caminhao.avi
+
+Total Bytes: 14036412
+Transmissão Concluida! Arquivo Patriota_Caminhao.avi
+Salvo em: received/Patriota_Caminhao.avi
+6854 pacotes recebidos!
+Tempo de transmissão: 2.93428 segundos
+Taxa de Transmissão: 4 MB/s
+
+--------------------------
+Choose your option:
+[0] - Exit
+[1] - List of Files
+[2] - Download one File
+[3] - Dowload all Files
+3
+
+Baixando: Patriota_Caminhao.avi
+Tamanho: 14036412
+Transmissão Concluida! Arquivo Patriota_Caminhao.avi
+Salvo em: received/Patriota_Caminhao.avi
+6854 packets received
+Tempo de transmissão: 2.96951 segundos
+Taxa de Transmissão: 4 MB/s
+
+Enviando ACK: Patriota_Caminhao.avi recebido!
+
+--------------------------
+
+Baixando: Tedio_Biquini_Cavadao.mp4
+Tamanho: 3722260
+Transmissão Concluida! Arquivo Tedio_Biquini_Cavadao.mp4
+Salvo em: received/Tedio_Biquini_Cavadao.mp4
+1818 packets received
+Tempo de transmissão: 0.842255 segundos
+Taxa de Transmissão: 4 MB/s
+
+Enviando ACK: Tedio_Biquini_Cavadao.mp4 recebido!
+
+--------------------------
+
+Baixando: Receba_Inteligencia.avi
+Tamanho: 1550096
+Transmissão Concluida! Arquivo Receba_Inteligencia.avi
+Salvo em: received/Receba_Inteligencia.avi
+757 packets received
+Tempo de transmissão: 0.357922 segundos
+Taxa de Transmissão: 4 MB/s
+
+Enviando ACK: Receba_Inteligencia.avi recebido!
+
+--------------------------
+
+Baixando: Tears_In_The_Rain.mp4
+Tamanho: 3728275
+Transmissão Concluida! Arquivo Tears_In_The_Rain.mp4
+Salvo em: received/Tears_In_The_Rain.mp4
+1821 packets received
+Tempo de transmissão: 0.797561 segundos
+Taxa de Transmissão: 4 MB/s
+
+Enviando ACK: Tears_In_The_Rain.mp4 recebido!
+
+--------------------------
+
+Baixando: death.mp4
+Tamanho: 43190
+Transmissão Concluida! Arquivo death.mp4
+Salvo em: received/death.mp4
+22 packets received
+Tempo de transmissão: 0.042539 segundos
+Taxa de Transmissão: 1 MB/s
+
+Enviando ACK: death.mp4 recebido!
+
+--------------------------
+
+Baixando: Dennis_Bergkamp_1998.avi
+Tamanho: 9441068
+Transmissão Concluida! Arquivo Dennis_Bergkamp_1998.avi
+Salvo em: received/Dennis_Bergkamp_1998.avi
+4610 packets received
+Tempo de transmissão: 1.83373 segundos
+Taxa de Transmissão: 5 MB/s
+
+Enviando ACK: Dennis_Bergkamp_1998.avi recebido!
+
+--------------------------
+
+Baixando: thats_life.txt
+Tamanho: 1280
+Transmissão Concluida! Arquivo thats_life.txt
+Salvo em: received/thats_life.txt
+1 packets received
+Tempo de transmissão: 0.044278 segundos
+Taxa de Transmissão: 0 MB/s
+
+Enviando ACK: thats_life.txt recebido!
+
+--------------------------
+
+Baixando: Bing_chilling.avi
+Tamanho: 1626156
+Transmissão Concluida! Arquivo Bing_chilling.avi
+Salvo em: received/Bing_chilling.avi
+795 packets received
+Tempo de transmissão: 0.358416 segundos
+Taxa de Transmissão: 4 MB/s
+
+Enviando ACK: Bing_chilling.avi recebido!
+
+--------------------------
+
+Baixando: Black_Mud_The_Black_Keys.mp4
+Tamanho: 4284516
+Transmissão Concluida! Arquivo Black_Mud_The_Black_Keys.mp4
+Salvo em: received/Black_Mud_The_Black_Keys.mp4
+2093 packets received
+Tempo de transmissão: 0.933676 segundos
+Taxa de Transmissão: 4 MB/s
+
+Enviando ACK: Black_Mud_The_Black_Keys.mp4 recebido!
+
+--------------------------
+
+Baixando: Comfortably_Numb(Pulse)_Pink_Floyd.mp4
+Tamanho: 24976804
+Transmissão Concluida! Arquivo Comfortably_Numb(Pulse)_Pink_Floyd.mp4
+Salvo em: received/Comfortably_Numb(Pulse)_Pink_Floyd.mp4
+12196 packets received
+Tempo de transmissão: 5.00408 segundos
+Taxa de Transmissão: 4 MB/s
+
+Enviando ACK: Comfortably_Numb(Pulse)_Pink_Floyd.mp4 recebido!
+
+--------------------------
+
+Baixando: h8.pdf
+Tamanho: 2919591
+Transmissão Concluida! Arquivo h8.pdf
+Salvo em: received/h8.pdf
+1426 packets received
+Tempo de transmissão: 0.665271 segundos
+Taxa de Transmissão: 4 MB/s
+
+Enviando ACK: h8.pdf recebido!
+
+--------------------------
+
+Baixando: Jesse_Pinkman.mp4
+Tamanho: 498606
+Transmissão Concluida! Arquivo Jesse_Pinkman.mp4
+Salvo em: received/Jesse_Pinkman.mp4
+244 packets received
+Tempo de transmissão: 0.135908 segundos
+Taxa de Transmissão: 3 MB/s
+
+Enviando ACK: Jesse_Pinkman.mp4 recebido!
+
+--------------------------
+Todos os arquivos foram recebidos com sucesso!
+Tempo de transmissão de todos os arquivos: 13.9937 segundos
+Taxa de Transmissão: 4 MB/s
+
+**************************
+Choose your option:
+[0] - Exit
+[1] - List of Files
+[2] - Download one File
+[3] - Dowload all Files
+0
+Conexão encerrada.
+

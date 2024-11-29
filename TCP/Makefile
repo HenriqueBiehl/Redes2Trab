@@ -13,7 +13,7 @@ server:server.cpp lib_network.o
 	g++ $(CXXFLAGS) server.cpp lib_network.o -o server
 
 lib_network.o: lib_network.cpp 
-	g++ $(CXXFLAGS) lib_network.cpp -c lib_network.o
+	g++ $(CXXFLAGS) -c lib_network.cpp -o lib_network.o
 
 clean:
 	rm -f $(TARGET) $(OBJECTS)
