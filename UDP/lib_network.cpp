@@ -1,5 +1,6 @@
 #include "lib_network.hpp"
 
+// Opções do usuário
 short chose_option(){
     short opt; 
 
@@ -18,22 +19,28 @@ short chose_option(){
     return opt;
 }
 
+// Recebe uma lista de nomes de arquivos do servidor
 int receive_file_list(int sockdescr, struct sockaddr_in sa, unsigned int i) {
     int bytes_rec;
     struct network_packet packet;
     int packet_count = 0;
 
+    // Recebendo do servidor
     while((bytes_rec = recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i)) >= 0){
         packet_count++;
+
+        // Imprime o nome dos arquivos
         std::cout << packet.buf;
         memset(&packet, 0, sizeof(struct network_packet));
 
+        // Se a mensagem é marcada como a última, encerra a operação
         if(packet.more == 0 || packet.op == NEXT_FILE)
             break;
     }
     return packet_count;
 }
 
+// Recebe um arquivo do servidor
 int receive_file(int bytes_left, char* destination, int sockdescr, sockaddr_in sa, unsigned int i) {
     struct network_packet packet;
     int packet_count = 0;
@@ -46,10 +53,12 @@ int receive_file(int bytes_left, char* destination, int sockdescr, sockaddr_in s
         return -1;
     }
 
+    // Recebe até todos os bytes terem sido recebidos ou até o servidor notificar que o arquivo terminou
     while(bytes_left > 0 ){
         packet_count++;
         recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &sa, &i);
 
+        // Escreve em um arquivo de destino
         file.write(packet.buf, packet.bytes);
 
         bytes_left -= packet.bytes; 
@@ -64,10 +73,12 @@ int receive_file(int bytes_left, char* destination, int sockdescr, sockaddr_in s
     return packet_count++;
 }
 
+// Envia um arquivo
 int send_file(int sockdescr, char *arq_name, short op_flag, struct sockaddr_in client, int i) {
     struct network_packet packet;
     int packet_count = 0;
 
+    // Abre o arquivo
     std::ifstream file(arq_name);
 
     if(!file.is_open()){
@@ -78,12 +89,14 @@ int send_file(int sockdescr, char *arq_name, short op_flag, struct sockaddr_in c
     memset(&packet, 0, sizeof(struct network_packet));
     std::streamsize bytes_read;
 
+    // Envia todo o arquivo
     while(!file.eof()){
         file.read(packet.buf, BUFF_SIZE);
         bytes_read = file.gcount();
         packet.op = op_flag;
         packet.bytes = bytes_read;
 
+        // No fim do arquivo, espera um tempo para o cliente processar o arquivo e envia uma notificação que a transmissão terminou
         if(file.eof() && op_flag != DOWNLOAD_ALL_FILES){
             usleep(1000);
             packet.more = 0;
@@ -92,6 +105,7 @@ int send_file(int sockdescr, char *arq_name, short op_flag, struct sockaddr_in c
             packet.more = 1;
         }
 
+        // Faz o envio
         sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, i);
         memset(&packet, 0, sizeof(struct network_packet));
 
@@ -103,7 +117,9 @@ int send_file(int sockdescr, char *arq_name, short op_flag, struct sockaddr_in c
     return packet_count;
 }
 
+// Compara um arquivo do cliente com um do servidor, se os dois existirem localmente
 void compare_file(const char* filename) {
+    // Abre dois arquivos, o do servidor(original) e o do cliente(received)
     std::cout << "No arquivo " << filename << ":" << std::endl;
     char original_name[MAX_ARQ_NAME+1];
     char received_name[MAX_ARQ_NAME+1];
@@ -125,13 +141,16 @@ void compare_file(const char* filename) {
     std::filesystem::path p_original{original_name};
     std::filesystem::path p_received{received_name};
 
+    // Se o arquivo tiver sido recebido, inicia a comparação
     if (!received.fail()) {
         long int original_size = std::filesystem::file_size(p_original);
         long int received_size = std::filesystem::file_size(p_received);
 
+        // Imprime os tamanhos
         std::cout << "Tamanho do arquivo original: " << original_size << std::endl; 
         std::cout << "Tamanho do arquivo recebido: " << received_size << std::endl;
 
+        // Compara para ver quantos bytes não chegaram ao decorrer da transmissão
         long int diff = abs(original_size - received_size);
         long int percentage = 100 * received_size / original_size;
 
@@ -140,6 +159,7 @@ void compare_file(const char* filename) {
 
         std::cout << "Um total de " << diff << " bytes não chegaram, sendo que cerca de " << percentage << "\% dos bytes foram transmitidos" << std::endl;
 
+        // Conta o número de bytes que chegaram na posição errada, ou com o conteúdo errado
         while (!original.eof() && !received.eof()) {
             original.read(c1, 1);
             received.read(c2, 1);
@@ -151,6 +171,7 @@ void compare_file(const char* filename) {
 
         long int percentage_diff = 100 * diff_bytes / received_size;
 
+        // Imprime a quantidade de bytes que chegou de forma errada
         std::cout << "Um total de " << diff_bytes << " bytes chegaram errado, sendo que cerca de "
             << percentage_diff << "\% dos bytes chegaram com algum problema(Ex. Ordem errada, valor incorreto, etc.)"
             << std::endl;

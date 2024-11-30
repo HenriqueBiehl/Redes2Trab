@@ -158,9 +158,10 @@ int main(int argc, char *argv[]){
                             auto stop = high_resolution_clock::now();
                             auto duration = duration_cast<microseconds>(stop-start);
                             double throughput = file_size/ duration.count();
-                            cout << endl << "** Relatório de Transmissão **" << endl;
 
                             // Imprime informações da transmissão
+                            cout << endl << "** Relatório de Transmissão **" << endl;
+
                             cout << "Arquivo " << arq_name << " enviado com sucesso!" << endl;
                             cout << "Arquivo enviado com sucesso!" << endl;
                             cout.precision(6);
@@ -237,10 +238,10 @@ int main(int argc, char *argv[]){
                                 auto stop = high_resolution_clock::now();
                                 auto duration = duration_cast<microseconds>(stop-start);
                                 double throughput = (double) file_size/ duration.count(); 
-                                
+
+                                // Imprime informações da transmissão                                
                                 cout << endl << "-- Relatório de Transmissão --" << endl;
 
-                                // Imprime informações da transmissão
                                 cout << "Arquivo enviado com sucesso!" << endl;
                                 cout.precision(6);
                                 cout << "Tempo de transmissão: " << duration.count()/1e6 << " segundos" << endl;                                
@@ -295,6 +296,8 @@ int main(int argc, char *argv[]){
 
                         cout << endl << "------------------------------------" << endl;
                         list_files.close();
+
+                        // Remove o arquivo temporário
                         system("rm -f temp");
 
 

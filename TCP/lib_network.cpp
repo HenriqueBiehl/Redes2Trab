@@ -39,7 +39,7 @@ int receive_file_list(int socket){
         ack_count++;
         packet_count++;
 
-        // Se a mensagem é marcado como a última, encerra a operação
+        // Se a mensagem é marcada como a última, encerra a operação
         if(packet.more == 0)
             break;
 

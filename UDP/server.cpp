@@ -29,6 +29,8 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
+    // Abre e inicializa o socket do servidor
+
 	gethostname(localhost, MAX_HOST_NAME);
 
 	if ((hp = gethostbyname(localhost)) == NULL){
@@ -56,10 +58,12 @@ int main(int argc, char *argv[]){
 
     int packet_count;
 
+    // Loop principal
     while (1) {
         i = sizeof(client);
         packet_count = 0;
 
+        // Recebe uma requisição do cliente
         recvfrom(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, &i);
 
         switch(packet.op) {
@@ -67,12 +71,14 @@ int main(int argc, char *argv[]){
                 {
                     cout << "Recebi pedido de Lista" << endl;
 
+                    // Obtem lista e insere em um arquivo temporário
                     const char *command = "find arqs -type f -printf \"%f %s bytes\n\" > temp";
             
                     system(command);
 
                     char temp[] = "temp";
 
+                    // Chama função para enviar o arquivo temporário ao cliente
                     auto start =  high_resolution_clock::now();
                     packet_count = send_file(sockdescr, temp, LIST_FILE, client, i);
 
@@ -81,6 +87,7 @@ int main(int argc, char *argv[]){
                         auto duration = duration_cast<microseconds>(stop-start);
                         double throughput = (double) filesystem::file_size(temp)/ duration.count();
 
+                        // Imprime informações da transmissão
                         cout << endl;
                         cout << "Lista enviada com sucesso!" << endl;
                         cout << "Tempo de transmissão de toda a lista: " << duration.count() << " microssegundos" << endl;
@@ -91,6 +98,7 @@ int main(int argc, char *argv[]){
                     else
                         cout << "Falha ao transmitir a lista de arquivos!";
 
+                    // Remove o arquivo temporário
                     system("rm -f temp");
                 }
                 break;
@@ -107,10 +115,12 @@ int main(int argc, char *argv[]){
                     packet.op = DOWNLOAD_FILE;
                     packet.bytes = file_size;
 
+                    // Envia tamanho do arquivo em bytes
                     sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, i);
                     
                     cout << "Enviando..." << endl;
 
+                    // Chama a função para enviar o arquivo requisitado
                     auto start = high_resolution_clock::now();
                     packet_count = send_file(sockdescr, arq_name, DOWNLOAD_FILE, client, i);
 
@@ -118,7 +128,8 @@ int main(int argc, char *argv[]){
                         auto stop = high_resolution_clock::now();
                         auto duration = duration_cast<microseconds>(stop-start);
                         double throughput = file_size/ duration.count();
-                        
+
+                        // Imprime informações da transmissão                        
                         cout << endl << "** Relatório de Transmissão **" << endl;
 
                         cout << "Arquivo " << arq_name << " enviado com sucesso!" << endl;
@@ -141,6 +152,7 @@ int main(int argc, char *argv[]){
 
             case (DOWNLOAD_ALL_FILES):
                 {
+                // Obtém lista e insere em um arquivo temporário
                 const char *command = "find arqs -type f -printf \"%f\n\" > temp";
 
                 system(command);
@@ -154,11 +166,14 @@ int main(int argc, char *argv[]){
                 bool success;
                 string file_name;
                 double bytes_transmitted = 0;
+
+                // Inicia o processo de enviar todos os arquivos
                 auto list_start =  high_resolution_clock::now();
                 while(getline(list_files, file_name)){
                     success = false;
                     cout << "Enviando: " << file_name << endl;
 
+                    // Obtém o nome do arquivo atual e prepara o pacote inicial com seu tamanho
                     char arq_name[MAX_ARQ_NAME + 1];
                     memset(arq_name, 0 , MAX_ARQ_NAME + 1);
                     strcpy(arq_name, "arqs/");
@@ -175,6 +190,7 @@ int main(int argc, char *argv[]){
                     packet.more = 1;
                     file_name.copy(packet.buf, file_name.size());
                     
+                    // Envia o pacote inicial com o nome e tamanho do arquivo
                     sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, i);
                     memset(&packet, 0, sizeof(struct network_packet));
 
@@ -183,6 +199,7 @@ int main(int argc, char *argv[]){
 
                     auto start = high_resolution_clock::now();
 
+                    // Chama a função para enviar o arquivo atual
                     packet_count = send_file(sockdescr, arq_name, DOWNLOAD_ALL_FILES, client, i);
 
                     if(packet_count > 0){
@@ -190,6 +207,7 @@ int main(int argc, char *argv[]){
                         auto duration = duration_cast<microseconds>(stop-start);
                         double throughput = (double) file_size/ duration.count(); 
                         
+                        // Imprime informações da transmissão
                         cout << endl << "-- Relatório de Transmissão --" << endl;
 
                         cout << "Arquivo enviado com sucesso!" << endl;
@@ -205,13 +223,15 @@ int main(int argc, char *argv[]){
                         cout << "ERRO: Falha ao transmitir o arquivo: " << arq_name << endl;
                     }
 
-                    // Espera pro proximo arquivo
+                    // Espera o cliente terminar de processar para enviar o próximo arquivo
                     usleep(6000);
 
+                    // Notifica o cliente que o próximo arquivo será enviado
                     packet.op = NEXT_FILE;
                     sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, i);
                 }
 
+                // Ao enviar todos os arquivos, notifica o cliente que a transmissão terminou
                 packet.more = 0; 
                 sendto(sockdescr, &packet, sizeof(struct network_packet), 0, (struct sockaddr *) &client, i);
 
@@ -220,6 +240,7 @@ int main(int argc, char *argv[]){
                     auto list_duration = duration_cast<microseconds>(list_stop-list_start);
                     auto throughput_list = bytes_transmitted/list_duration.count();
 
+                    // Imprime informações das transmissões
                     cout << endl << "-- Relatório de Transmissão Final --" << endl;
 
                     cout << "Todos os arquivos foram enviados com sucesso!" << endl;
@@ -235,6 +256,8 @@ int main(int argc, char *argv[]){
                 cout << endl << "------------------------------------" << endl;
 
                 list_files.close();
+
+                // Remove o arquivo temporário
                 system("rm -f temp");
 
                 }
