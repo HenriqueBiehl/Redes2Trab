@@ -1,5 +1,6 @@
 #include "lib_network.hpp"
 
+// Opções do usuário
 short chose_option(){
     short opt; 
 
@@ -18,11 +19,13 @@ short chose_option(){
     return opt;
 }
 
+// Recebe uma lista de nomes de arquivos do servidor
 int receive_file_list(int socket){
     struct network_packet packet;
     int ack_count;
     int packet_count = 0;
 
+    // Recebendo do servidor
     while(recv(socket, &packet, sizeof(struct network_packet) , 0) >= 0){
 
         if(packet.op == ERROR){
@@ -30,14 +33,17 @@ int receive_file_list(int socket){
             return -1;
         }
 
+        // Imprime o nome dos arquivos
         std::cout << packet.buf;
         memset(&packet, 0, sizeof(struct network_packet));
         ack_count++;
         packet_count++;
 
+        // Se a mensagem é marcado como a última, encerra a operação
         if(packet.more == 0)
             break;
 
+        // A cada 100 mensagens, envia um ACK
         if(ack_count == PACK_ROOF){
             ack_count  = 0; 
             packet.op = ACK;
@@ -48,6 +54,7 @@ int receive_file_list(int socket){
     return packet_count;
 }
 
+// Recebe um arquivo do servidor
 int receive_file(int socket, char *destination, int total_bytes){
     struct network_packet packet;
     short ack_count = 0;
@@ -60,6 +67,7 @@ int receive_file(int socket, char *destination, int total_bytes){
         return -1; 
     }             
 
+    // Recebe até todos os bytes terem sido recebidos
     while(total_bytes > 0 ){
         
         if(recv(socket, &packet, sizeof(struct network_packet) , 0) < 0){
@@ -70,10 +78,12 @@ int receive_file(int socket, char *destination, int total_bytes){
         packet_count++;
         ack_count++;
 
+        // Escreve em um arquivo de destino
         file.write(packet.buf, packet.bytes);
 
         total_bytes -= packet.bytes; 
         
+        // A cada 100 mensagens, envia um ACK
         if(ack_count == PACK_ROOF){
             ack_count  = 0; 
             packet.op = ACK;
@@ -88,11 +98,13 @@ int receive_file(int socket, char *destination, int total_bytes){
     return packet_count;
 }
 
+// Envia um arquivo
 int send_file(int socket, char *file_name, short op_flag){
     struct network_packet packet;
     int packet_count = 0;
     short ack_count = 0;
 
+    // Abre o arquivo
     std::ifstream file(file_name); 
 
     if(!file.is_open()){
@@ -103,6 +115,7 @@ int send_file(int socket, char *file_name, short op_flag){
     memset(&packet, 0, sizeof(struct network_packet)); 
     std::streamsize bytes_read; 
     
+    // Envia todo o arquivo
     while(!file.eof()){
         file.read(packet.buf, BUFF_SIZE);
         bytes_read = file.gcount(); 
@@ -114,12 +127,14 @@ int send_file(int socket, char *file_name, short op_flag){
         else 
             packet.op = 1;
 
+        // Faz o envio
         send(socket, &packet, sizeof(struct network_packet), 0);
 
         memset(&packet, 0, sizeof(struct network_packet)); 
         packet_count++;
         ack_count++;
 
+        // A cada 100 envios, espera um ACK
         if(ack_count == PACK_ROOF){
             std::cout << "100 pacotes enviados, aguardando ACK..." << std::endl;
             ack_count = 0;
